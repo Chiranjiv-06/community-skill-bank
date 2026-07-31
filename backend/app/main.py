@@ -7,4 +7,12 @@ app = FastAPI(
 
 @app.get("/")
 def home():
-    return {"message": "Community Skill Bank API Running"}
+    return {
+        "message": "Community Skill Bank API Running"
+    }
+
+@app.get("/health")
+def health():
+    return {
+        "status": "healthy"
+    }
