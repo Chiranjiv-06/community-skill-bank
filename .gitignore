@@ -1,15 +1,4 @@
-# Python
+.env
 venv/
 __pycache__/
 *.pyc
-.env
-
-# Node
-node_modules/
-
-# VS Code
-.vscode/
-
-# OS
-.DS_Store
-Thumbs.db
