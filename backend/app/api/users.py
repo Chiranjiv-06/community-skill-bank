@@ -42,12 +42,16 @@ def create_user(
 
     # Password hash karke ek hi baar user banayenge
     new_user = User(
-        full_name=user.full_name,
-        email=user.email,
-        hashed_password=hash_password(user.password),
-        phone=user.phone,
-        location=user.location
-    )
+    full_name=user.full_name,
+    email=user.email,
+    hashed_password=hash_password(user.password),
+    phone=user.phone,
+    location=user.location,
+    latitude=user.latitude,
+    longitude=user.longitude,
+    certifications=user.certifications,
+    availability=user.availability
+)
 
     db.add(new_user)
     db.commit()
