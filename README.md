@@ -105,7 +105,9 @@ Requirement Analysis
 
 - Chiranjiv Kuhikar
 - Dipanshu Fulzele
-- Rohit Bhoyar
+- Sawri Umap
+- Kashish Khandare
+- Sangam Dhone
 
 ---
 
