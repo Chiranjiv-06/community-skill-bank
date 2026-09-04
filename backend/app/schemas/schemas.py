@@ -4,9 +4,10 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, EmailStr
 
 
-# ---------- User ----------
+# User schemas
 
 class UserCreate(BaseModel):
+    """Schema for creating a new user account (used by /api/auth/register)."""
     full_name: str
     email: EmailStr
     password: str
@@ -16,8 +17,13 @@ class UserCreate(BaseModel):
     longitude: Optional[float] = None
     certifications: Optional[str] = None
     availability: Optional[str] = None
+    # Role defaults to citizen_volunteer — no formal skills required by default.
+    # Accepted values: skilled_volunteer, citizen_volunteer, admin, volunteer (legacy)
+    role: str = "citizen_volunteer"
+
 
 class UserOut(BaseModel):
+    """Schema for returning user data in API responses."""
     id: int
     full_name: str
     email: EmailStr
@@ -26,26 +32,41 @@ class UserOut(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     role: str
+    bio: Optional[str] = None
     certifications: Optional[str] = None
     availability: Optional[str] = None
+    is_active: bool = True
+    created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 
 
+# Token schema
+
 class Token(BaseModel):
+    """JWT access token response."""
     access_token: str
     token_type: str = "bearer"
 
 
-# ---------- Skill ----------
+# Skill schemas
 
 class SkillCreate(BaseModel):
+    """Schema for creating a new skill record."""
     title: str
     category: str
     description: Optional[str] = None
 
 
+class SkillUpdate(BaseModel):
+    """Schema for updating an existing skill record."""
+    title: Optional[str] = None
+    category: Optional[str] = None
+    description: Optional[str] = None
+
+
 class SkillOut(BaseModel):
+    """Schema for returning skill data in API responses."""
     id: int
     title: str
     category: str
@@ -56,9 +77,12 @@ class SkillOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-# ---------- Emergency ----------
+# ---------------------------------------------------------------------------
+# Emergency schemas
+# ---------------------------------------------------------------------------
 
 class EmergencyCreate(BaseModel):
+    """Schema for reporting a new emergency."""
     title: str
     description: Optional[str] = None
     category: str
@@ -67,6 +91,7 @@ class EmergencyCreate(BaseModel):
 
 
 class EmergencyOut(BaseModel):
+    """Schema for returning emergency data in API responses."""
     id: int
     title: str
     description: Optional[str] = None

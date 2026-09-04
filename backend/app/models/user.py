@@ -1,4 +1,16 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text
+"""
+app/models/user.py
+
+SQLAlchemy User model — Community Skill Bank.
+
+Roles:
+    admin             — full system access
+    skilled_volunteer — formal skills, training, certifications
+    citizen_volunteer — willingness to help, capabilities, resources
+    volunteer         — legacy value (backward compatible, treated as citizen_volunteer)
+"""
+
+from sqlalchemy import Boolean, Column, Integer, String, Float, DateTime, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -8,34 +20,37 @@ from app.database.base import Base
 class User(Base):
     __tablename__ = "users"
 
+    # Primary key
     id = Column(Integer, primary_key=True, index=True)
 
+    # Core identity
     full_name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
 
+    # Contact
     phone = Column(String, nullable=True)
-    location = Column(String, nullable=True)
 
+    # Location
+    location = Column(String, nullable=True)       # human-readable address
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
 
-    role = Column(String, default="volunteer", nullable=False)
+    # Role — controls actor type and access level
+    # Valid values: admin, skilled_volunteer, citizen_volunteer, volunteer (legacy)
+    role = Column(String(20), default="citizen_volunteer", nullable=False)
 
-    certifications = Column(Text, nullable=True)
-    availability = Column(String, nullable=True)
+    # Profile
+    bio = Column(Text, nullable=True)              # short self-description (Phase 2 addition)
+    certifications = Column(Text, nullable=True)   # legacy free-text field (kept for compat)
+    availability = Column(String, nullable=True)   # e.g. "available", "busy", "unavailable"
 
-    created_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now()
-    )
+    # Account status
+    is_active = Column(Boolean, default=True, nullable=False)  # Phase 2 addition
 
-    skills = relationship(
-        "Skill",
-        back_populates="owner"
-    )
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    emergencies = relationship(
-        "Emergency",
-        back_populates="reporter"
-    )
+    # Relationships
+    skills = relationship("Skill", back_populates="owner")
+    emergencies = relationship("Emergency", back_populates="reporter")
