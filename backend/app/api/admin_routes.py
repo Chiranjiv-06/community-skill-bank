@@ -8,7 +8,7 @@ PATCH /api/admin/users/{id}/role    — Change a user's role
 GET   /api/admin/stats              — Quick platform statistics
 """
 
-from typing import List, Optional
+from typing import List, Optional, cast
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, EmailStr
@@ -82,7 +82,7 @@ def list_all_users(
     if role:
         query = query.filter(User.role == role)
     if is_active is not None:
-        query = query.filter(User.is_active == is_active)
+        query = query.filter(User.is_active.is_(is_active))
     return query.order_by(User.id).all()
 
 
@@ -116,7 +116,7 @@ def update_user_role(
         )
 
     # Prevent admin from accidentally removing their own admin role
-    if user.id == current_admin.id and body.role != "admin":
+    if cast(int, user.id) == cast(int, current_admin.id) and body.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You cannot change your own admin role",
@@ -125,6 +125,18 @@ def update_user_role(
     setattr(user, "role", body.role)
     db.commit()
     db.refresh(user)
+
+    from app.services.audit_service import AuditService
+    AuditService.record_event(
+        db=db,
+        action="USER_ROLE_CHANGE",
+        entity_type="user",
+        entity_id=cast(int, user.id),
+        actor_user_id=cast(int, current_admin.id),
+        outcome="success",
+        metadata={"new_role": body.role},
+    )
+
     return user
 
 
@@ -145,7 +157,7 @@ def platform_stats(
         User.role.in_(["citizen_volunteer", "volunteer"])
     ).count()
     admins = db.query(User).filter(User.role == "admin").count()
-    active_users = db.query(User).filter(User.is_active == True).count()
+    active_users = db.query(User).filter(User.is_active.is_(True)).count()
 
     total_emergencies = db.query(Emergency).count()
     open_emergencies = db.query(Emergency).filter(Emergency.status == "open").count()

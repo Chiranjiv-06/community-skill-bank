@@ -13,6 +13,8 @@ class Skill(Base):
     title = Column(String, nullable=False)
     category = Column(String, nullable=False)
     description = Column(Text, nullable=True)
+    experience_years = Column(Integer, default=0, nullable=False)
+    proficiency = Column(String(20), default="intermediate", nullable=False)
 
     owner_id = Column(Integer, ForeignKey("users.id"))
 
@@ -25,6 +27,10 @@ class Skill(Base):
         "User",
         back_populates="skills"
     )
+    certifications = relationship(
+        "VolunteerCertification",
+        back_populates="skill"
+    )
 
 
 class Emergency(Base):
@@ -35,6 +41,8 @@ class Emergency(Base):
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     category = Column(String, nullable=False)
+    severity = Column(String(20), default="medium", nullable=False)
+    location = Column(String, nullable=True)
 
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
@@ -50,8 +58,28 @@ class Emergency(Base):
         DateTime(timezone=True),
         server_default=func.now()
     )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now()
+    )
 
     reporter = relationship(
         "User",
         back_populates="emergencies"
+    )
+    requirements = relationship(
+        "EmergencyRequirement",
+        back_populates="emergency",
+        cascade="all, delete-orphan"
+    )
+    assignments = relationship(
+        "EmergencyAssignment",
+        back_populates="emergency",
+        cascade="all, delete-orphan"
+    )
+    feedbacks = relationship(
+        "AssignmentFeedback",
+        back_populates="emergency",
+        cascade="all, delete-orphan"
     )

@@ -18,6 +18,7 @@ from app.database.dependencies import get_db
 from app.models.user import User
 from app.schemas.schemas import UserCreate, UserOut, Token
 from app.utils.security import hash_password, verify_password, create_access_token
+from app.services.audit_service import AuditService
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
@@ -43,6 +44,22 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
             detail="An account with this email already exists",
         )
 
+    # Prevent privilege escalation during public registration
+    allowed_public_roles = {"citizen_volunteer", "skilled_volunteer", "volunteer"}
+    assigned_role = user.role or "citizen_volunteer"
+
+    if assigned_role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Admin role cannot be assigned through public registration",
+        )
+
+    if assigned_role not in allowed_public_roles:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid role. Allowed public roles: {', '.join(sorted(allowed_public_roles))}",
+        )
+
     new_user = User(
         full_name=user.full_name,
         email=user.email,
@@ -53,7 +70,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
         longitude=user.longitude,
         certifications=user.certifications,
         availability=user.availability,
-        role=user.role,
+        role=assigned_role,
     )
 
     db.add(new_user)
@@ -79,10 +96,29 @@ def login_form(
     user = db.query(User).filter(User.email == form_data.username).first()
 
     if not user or not verify_password(form_data.password, str(user.hashed_password)):
+        AuditService.record_event(
+            db=db,
+            action="AUTH_LOGIN_FAILURE",
+            entity_type="auth",
+            entity_id=None,
+            actor_user_id=None,
+            outcome="failure",
+            metadata={"reason": "invalid_credentials"},
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         )
+
+    AuditService.record_event(
+        db=db,
+        action="AUTH_LOGIN_SUCCESS",
+        entity_type="user",
+        entity_id=user.id,
+        actor_user_id=user.id,
+        outcome="success",
+        metadata={"role": user.role},
+    )
 
     # FIXED: sub must be str(user.id) — same as all other login endpoints
     access_token = create_access_token(

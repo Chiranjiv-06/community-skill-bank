@@ -32,6 +32,15 @@ from app.database.base import Base  # noqa: E402
 # Core models — existing tables
 from app.models.user import User            # noqa: F401, E402
 from app.models.models import Skill, Emergency  # noqa: F401, E402
+from app.models.volunteer_profile import VolunteerProfile  # noqa: F401, E402
+from app.models.emergency_requirement import EmergencyRequirement  # noqa: F401, E402
+from app.models.emergency_assignment import EmergencyAssignment  # noqa: F401, E402
+from app.models.volunteer_certification import VolunteerCertification  # noqa: F401, E402
+from app.models.volunteer_training import VolunteerTraining  # noqa: F401, E402
+from app.models.assignment_feedback import AssignmentFeedback  # noqa: F401, E402
+from app.models.community_activity import CommunityActivity  # noqa: F401, E402
+from app.models.community_participation import CommunityParticipation  # noqa: F401, E402
+from app.models.notification import Notification  # noqa: F401, E402
 
 # ---------------------------------------------------------------------------
 # Alembic config object

@@ -54,3 +54,12 @@ class User(Base):
     # Relationships
     skills = relationship("Skill", back_populates="owner")
     emergencies = relationship("Emergency", back_populates="reporter")
+    volunteer_profile = relationship("VolunteerProfile", uselist=False, back_populates="user", cascade="all, delete-orphan")
+    assignments = relationship("EmergencyAssignment", foreign_keys="EmergencyAssignment.volunteer_id", back_populates="volunteer", cascade="all, delete-orphan")
+    certifications_structured = relationship("VolunteerCertification", foreign_keys="VolunteerCertification.user_id", back_populates="user", cascade="all, delete-orphan")
+    trainings = relationship("VolunteerTraining", foreign_keys="VolunteerTraining.user_id", back_populates="user", cascade="all, delete-orphan")
+    received_feedbacks = relationship("AssignmentFeedback", foreign_keys="AssignmentFeedback.volunteer_id", back_populates="volunteer", cascade="all, delete-orphan")
+    submitted_feedbacks = relationship("AssignmentFeedback", foreign_keys="AssignmentFeedback.submitted_by_id", back_populates="submitted_by")
+    organized_activities = relationship("CommunityActivity", foreign_keys="CommunityActivity.organizer_id", back_populates="organizer", cascade="all, delete-orphan")
+    community_participations = relationship("CommunityParticipation", foreign_keys="CommunityParticipation.volunteer_id", back_populates="volunteer", cascade="all, delete-orphan")
+    notifications = relationship("Notification", foreign_keys="Notification.user_id", back_populates="user", cascade="all, delete-orphan")
