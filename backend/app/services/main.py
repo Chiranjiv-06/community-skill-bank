@@ -1,0 +1,38 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.database import Base, engine
+from app.api import auth_routes, skill_routes, emergency_routes
+
+# Create tables (for quick local dev; use Alembic migrations in production)
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI(
+    title="Community Skill Bank for Disaster & Emergency Response",
+    description="API for connecting volunteer skills with disaster & emergency response needs",
+    version="1.0.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(auth_routes.router)
+app.include_router(skill_routes.router)
+app.include_router(emergency_routes.router)
+
+
+@app.get("/")
+def root():
+    return {"message": "Community Skill Bank API is running"}
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
