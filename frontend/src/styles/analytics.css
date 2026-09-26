@@ -1,0 +1,653 @@
+/* ==========================================================================
+   ANALYTICS DASHBOARD STYLES (STAGE 13)
+   Theme: Operational Emergency Incident Command Analytics
+   Dark theme first with dynamic CSS variables
+   ========================================================================== */
+
+/* ---------------------------------------------------------
+   DASHBOARD LAYOUT & HEADERS
+   --------------------------------------------------------- */
+.analytics-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-bottom: var(--space-12);
+  animation: fadeIn 0.25s ease-out;
+}
+
+.analytics-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: rgba(249, 115, 22, 0.08);
+  border: 1px solid rgba(249, 115, 22, 0.25);
+  border-radius: var(--radius-md);
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.analytics-banner-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.analytics-banner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: rgba(249, 115, 22, 0.2);
+  color: var(--color-orange-400);
+  border-radius: var(--radius-full);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.7rem;
+}
+
+/* ---------------------------------------------------------
+   FILTER BAR
+   --------------------------------------------------------- */
+.analytics-filter-card {
+  padding: var(--space-4) var(--space-5);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.analytics-filter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.analytics-period-selector {
+  display: inline-flex;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  gap: 2px;
+}
+
+.analytics-period-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.analytics-period-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.analytics-period-btn.active {
+  background: var(--color-orange-500);
+  color: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.35);
+}
+
+.analytics-filter-select {
+  background: var(--bg-surface-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  font-size: var(--font-xs);
+  font-weight: 500;
+  outline: none;
+  min-width: 140px;
+  transition: border-color var(--transition-fast);
+}
+
+.analytics-filter-select:focus {
+  border-color: var(--color-orange-500);
+}
+
+.analytics-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ---------------------------------------------------------
+   KPI CARDS GRID
+   --------------------------------------------------------- */
+.analytics-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+.kpi-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-3);
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(249, 115, 22, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--kpi-accent-color, var(--color-orange-500));
+}
+
+.kpi-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.kpi-card-title {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.kpi-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--kpi-accent-bg, rgba(249, 115, 22, 0.12));
+  color: var(--kpi-accent-color, var(--color-orange-500));
+  flex-shrink: 0;
+}
+
+.kpi-card-body {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.kpi-card-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+  font-family: var(--font-mono);
+}
+
+.kpi-card-unit {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.kpi-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--space-2);
+}
+
+.kpi-trend-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 600;
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+}
+
+.kpi-trend-pill.positive {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34D399;
+}
+
+.kpi-trend-pill.neutral {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60A5FA;
+}
+
+.kpi-trend-pill.warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #FBBF24;
+}
+
+/* ---------------------------------------------------------
+   DASHBOARD SECTION LAYOUTS
+   --------------------------------------------------------- */
+.analytics-section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.analytics-section-subtitle {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
+}
+
+.analytics-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-5);
+}
+
+.analytics-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-5);
+}
+
+.analytics-grid-1-2 {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: var(--space-5);
+}
+
+.analytics-grid-2-1 {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-5);
+}
+
+@media (max-width: 1024px) {
+  .analytics-grid-2,
+  .analytics-grid-3,
+  .analytics-grid-1-2,
+  .analytics-grid-2-1 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------------------------------------------------------
+   CHART CARD & PANELS
+   --------------------------------------------------------- */
+.chart-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  position: relative;
+  min-height: 320px;
+}
+
+.chart-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.chart-title-group h3 {
+  font-size: var(--font-base);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 2px 0;
+}
+
+.chart-title-group p {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.chart-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+}
+
+/* ---------------------------------------------------------
+   DONUT CHART COMPONENT
+   --------------------------------------------------------- */
+.donut-chart-wrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.donut-svg-container {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  flex-shrink: 0;
+}
+
+.donut-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.donut-center-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.donut-center-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  line-height: 1.1;
+}
+
+.donut-center-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 140px;
+}
+
+.donut-legend-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-xs);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  transition: background var(--transition-fast);
+}
+
+.donut-legend-row:hover {
+  background: var(--bg-surface-active);
+}
+
+.donut-legend-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.donut-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.donut-legend-name {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.donut-legend-value {
+  color: var(--text-primary);
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+/* ---------------------------------------------------------
+   BAR CHART COMPONENT
+   --------------------------------------------------------- */
+.bar-chart-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.bar-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bar-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-xs);
+}
+
+.bar-row-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.bar-row-value {
+  color: var(--text-primary);
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.bar-track {
+  height: 10px;
+  background: var(--bg-surface-elevated);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--border-subtle);
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 4px;
+}
+
+/* ---------------------------------------------------------
+   AREA & LINE TREND CHART
+   --------------------------------------------------------- */
+.trend-chart-container {
+  width: 100%;
+  position: relative;
+}
+
+.trend-svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.trend-grid-line {
+  stroke: var(--border-subtle);
+  stroke-dasharray: 4 4;
+}
+
+.trend-axis-text {
+  font-size: 11px;
+  fill: var(--text-muted);
+  font-family: var(--font-sans);
+}
+
+.trend-data-point {
+  transition: r 0.2s ease, fill 0.2s ease;
+  cursor: pointer;
+}
+
+.trend-data-point:hover {
+  r: 6;
+  stroke-width: 3;
+}
+
+/* ---------------------------------------------------------
+   GEOGRAPHIC OPERATIONAL COVERAGE
+   --------------------------------------------------------- */
+.geo-wards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+
+.geo-ward-card {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.geo-ward-card:hover {
+  border-color: rgba(249, 115, 22, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.geo-ward-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.geo-ward-title {
+  font-size: var(--font-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.geo-ward-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+
+.geo-stat-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.geo-stat-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.geo-stat-val {
+  font-size: var(--font-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.geo-coverage-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.geo-coverage-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------
+   HIGH DEMAND SKILLS TABLE / BARS
+   --------------------------------------------------------- */
+.demand-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--font-xs);
+}
+
+.demand-table th {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.demand-table td {
+  padding: var(--space-3);
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: middle;
+}
+
+.demand-table tr:hover td {
+  background: var(--bg-surface-elevated);
+}
+
+/* ---------------------------------------------------------
+   EMPTY & ERROR OVERLAYS
+   --------------------------------------------------------- */
+.analytics-empty-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-10) var(--space-4);
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+  gap: var(--space-3);
+}

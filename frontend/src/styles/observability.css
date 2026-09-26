@@ -1,0 +1,294 @@
+/* ==========================================================================
+   AUDIT & OBSERVABILITY STYLES (STAGE 15)
+   Theme: Operational Audit Logs & Infrastructure Observability
+   Dark-first design adhering to Community Skill Bank design tokens
+   ========================================================================== */
+
+/* ---------------------------------------------------------
+   AUDIT LOGS LAYOUT
+   --------------------------------------------------------- */
+.audit-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-bottom: var(--space-12);
+  animation: fadeIn 0.25s ease-out;
+}
+
+.audit-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+}
+
+.audit-search-input-wrapper {
+  position: relative;
+  flex: 1;
+  min-width: 240px;
+}
+
+.audit-search-input {
+  width: 100%;
+  padding-left: 36px;
+  padding-right: 12px;
+  height: 38px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--font-xs);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.audit-search-input:focus {
+  border-color: var(--color-orange-500);
+}
+
+.audit-filters-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* ---------------------------------------------------------
+   AUDIT TABLE & CELLS
+   --------------------------------------------------------- */
+.audit-table-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.audit-table-wrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-xs);
+  min-width: 820px;
+}
+
+.audit-table th {
+  background: var(--bg-surface-elevated);
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-default);
+  white-space: nowrap;
+}
+
+.audit-table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
+.audit-table tr:hover td {
+  background: var(--bg-surface-elevated);
+  cursor: pointer;
+}
+
+.audit-code-pill {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  padding: 2px 6px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  display: inline-block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------
+   PAGINATION CONTROLS
+   --------------------------------------------------------- */
+.audit-pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-5);
+  background: var(--bg-surface-elevated);
+  border-top: 1px solid var(--border-default);
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.audit-pagination-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ---------------------------------------------------------
+   AUDIT DETAIL MODAL
+   --------------------------------------------------------- */
+.audit-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.audit-detail-item {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.audit-detail-item.full-width {
+  grid-column: span 2;
+}
+
+.audit-detail-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.audit-detail-val {
+  font-size: var(--font-xs);
+  color: var(--text-primary);
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.audit-json-box {
+  background: var(--bg-app);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  overflow-x: auto;
+  max-height: 180px;
+}
+
+/* ---------------------------------------------------------
+   SYSTEM METRICS STYLES
+   --------------------------------------------------------- */
+.metrics-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-bottom: var(--space-12);
+  animation: fadeIn 0.25s ease-out;
+}
+
+.health-status-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  position: relative;
+  overflow: hidden;
+}
+
+.health-status-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--health-accent, var(--color-success));
+}
+
+.health-status-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.health-status-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.health-status-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-success);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+  animation: pulse 2s infinite ease-in-out;
+}
+
+.health-status-dot.degraded {
+  background: var(--color-warning);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
+}
+
+.health-status-dot.unavailable {
+  background: var(--color-critical);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.8; }
+}
+
+.health-components-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.health-component-pill {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-xs);
+}
+
+.health-component-name {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.health-component-latency {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
