@@ -1,10 +1,9 @@
 /**
  * Central API Client Foundation
- * Prepared for future FastAPI / REST / JWT backend integration.
- * In Stage 1, does NOT connect to the actual backend or fail if backend is offline.
+ * Communicates with FastAPI backend with REST / JWT authentication.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || 'http://localhost:8000';
 
 class ApiClient {
   constructor(baseUrl) {
@@ -18,6 +17,10 @@ class ApiClient {
 
   clearToken() {
     this.authToken = null;
+  }
+
+  getToken() {
+    return this.authToken;
   }
 
   getHeaders(customHeaders = {}) {
@@ -47,6 +50,9 @@ class ApiClient {
       // Handle 401 Unauthorized globally
       if (response.status === 401) {
         console.warn('[ApiClient] 401 Unauthorized received. Session expired or unauthenticated.');
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+        }
       }
 
       const contentType = response.headers.get('content-type');
@@ -58,7 +64,11 @@ class ApiClient {
       }
 
       if (!response.ok) {
-        throw new Error(data?.detail || data?.message || `HTTP error ${response.status}`);
+        const errorMsg =
+          (data && typeof data === 'object' && (data.detail || data.message)) ||
+          (typeof data === 'string' && data) ||
+          `HTTP error ${response.status}`;
+        throw new Error(errorMsg);
       }
 
       return data;
@@ -76,7 +86,7 @@ class ApiClient {
     return this.request(endpoint, {
       ...options,
       method: 'POST',
-      body: JSON.stringify(body)
+      body: body !== undefined ? JSON.stringify(body) : undefined
     });
   }
 
@@ -84,7 +94,15 @@ class ApiClient {
     return this.request(endpoint, {
       ...options,
       method: 'PUT',
-      body: JSON.stringify(body)
+      body: body !== undefined ? JSON.stringify(body) : undefined
+    });
+  }
+
+  patch(endpoint, body, options = {}) {
+    return this.request(endpoint, {
+      ...options,
+      method: 'PATCH',
+      body: body !== undefined ? JSON.stringify(body) : undefined
     });
   }
 

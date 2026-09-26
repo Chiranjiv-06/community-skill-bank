@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import authService from '../services/authService';
+import api from '../services/api';
 
 const AuthContext = createContext();
 
@@ -18,6 +19,22 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   /**
+   * Logout user and reset state
+   */
+  const logout = useCallback(async () => {
+    setLoading(true);
+    try {
+      await authService.logout();
+    } finally {
+      api.clearToken();
+      setCurrentUser(null);
+      setError(null);
+      setAuthStatus(AUTH_STATES.UNAUTHENTICATED);
+      setLoading(false);
+    }
+  }, []);
+
+  /**
    * Restore existing session from storage on mount
    */
   const restoreSession = useCallback(async () => {
@@ -25,18 +42,21 @@ export const AuthProvider = ({ children }) => {
     setAuthStatus(AUTH_STATES.RESTORING_SESSION);
     try {
       const session = await authService.restoreSession();
-      if (session?.user) {
+      if (session?.user && session?.token) {
+        api.setToken(session.token);
         setCurrentUser(session.user);
         setAuthStatus(AUTH_STATES.AUTHENTICATED);
         setError(null);
         return session.user;
       } else {
+        api.clearToken();
         setCurrentUser(null);
         setAuthStatus(AUTH_STATES.UNAUTHENTICATED);
         return null;
       }
     } catch (err) {
       console.warn('[AuthContext] Session restoration error:', err);
+      api.clearToken();
       setCurrentUser(null);
       setAuthStatus(AUTH_STATES.UNAUTHENTICATED);
       return null;
@@ -50,6 +70,19 @@ export const AuthProvider = ({ children }) => {
   }, [restoreSession]);
 
   /**
+   * Global 401 unauthorized listener
+   */
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      logout();
+    };
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
+  }, [logout]);
+
+  /**
    * Login user with credentials
    * @param {Object} credentials - { email, password }
    */
@@ -59,10 +92,14 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     try {
       const response = await authService.login(credentials);
+      if (response?.token) {
+        api.setToken(response.token);
+      }
       setCurrentUser(response.user);
       setAuthStatus(AUTH_STATES.AUTHENTICATED);
       return response;
     } catch (err) {
+      api.clearToken();
       setError(err.message || 'Authentication failed');
       setAuthStatus(AUTH_STATES.ERROR);
       throw err;
@@ -81,8 +118,15 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     try {
       const response = await authService.register(userData);
-      setCurrentUser(response.user);
-      setAuthStatus(AUTH_STATES.AUTHENTICATED);
+      if (response?.token) {
+        api.setToken(response.token);
+        setCurrentUser(response.user);
+        setAuthStatus(AUTH_STATES.AUTHENTICATED);
+      } else {
+        // Backend registration created the account but did not issue a token
+        setCurrentUser(null);
+        setAuthStatus(AUTH_STATES.UNAUTHENTICATED);
+      }
       return response;
     } catch (err) {
       setError(err.message || 'Registration failed');
@@ -93,23 +137,12 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  /**
-   * Logout user and reset state
-   */
-  const logout = async () => {
-    setLoading(true);
-    try {
-      await authService.logout();
-    } finally {
-      setCurrentUser(null);
-      setError(null);
-      setAuthStatus(AUTH_STATES.UNAUTHENTICATED);
-      setLoading(false);
-    }
-  };
-
   const isAuthenticated = Boolean(currentUser);
   const role = currentUser ? currentUser.role : null;
+  const isAdmin = role === 'admin' || role === 'superadmin' || role === 'coordinator';
+  const isVolunteer = role === 'volunteer' || role === 'citizen_volunteer' || role === 'skilled_volunteer';
+  const hasRole = (targetRole) => role === targetRole;
+  const hasAnyRole = (roles = []) => roles.includes(role);
 
   return (
     <AuthContext.Provider
@@ -121,10 +154,16 @@ export const AuthProvider = ({ children }) => {
 
         // Status flags
         isAuthenticated,
+        isAdmin,
+        isVolunteer,
         loading,
         isLoading: loading, // Alias
         authStatus,
         error,
+
+        // Role helpers
+        hasRole,
+        hasAnyRole,
 
         // Actions
         login,

@@ -7,45 +7,47 @@
  * - logout()
  * - getCurrentUser()
  * - restoreSession()
+ * - getStoredToken()
  * 
- * In Stage 2, uses an isolated frontend development authentication layer.
- * In Stage 17, these methods will be swapped to call api.js (FastAPI + PostgreSQL)
- * without requiring changes to components or AuthContext.
+ * Connects to real FastAPI / PostgreSQL backend via api.js:
+ * - POST /auth/login
+ * - GET /api/users/me
+ * - POST /api/auth/register
  */
 
-import { ROLES } from '../utils/roles.js';
-import { DEV_USERS } from '../data/devUsers.js';
+import { api } from './api.js';
 
 const SESSION_STORAGE_KEY = 'csb_auth_session';
-const REGISTERED_USERS_KEY = 'csb_dev_registered_users';
 
 /**
- * Retrieve any registered users stored during development sessions
+ * Single normalization point:
+ * Backend returns: id, full_name, email, role, phone, location, etc.
+ * Frontend expects: id, name, email, role (while keeping all backend properties).
  */
-const getRegisteredUsers = () => {
-  try {
-    const raw = localStorage.getItem(REGISTERED_USERS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-};
-
-/**
- * Save newly registered user to development storage
- */
-const saveRegisteredUser = (userRecord) => {
-  try {
-    const existing = getRegisteredUsers();
-    localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify([...existing, userRecord]));
-  } catch (err) {
-    console.warn('[authService] Failed to persist development user:', err);
-  }
+export const normalizeUser = (backendUser) => {
+  if (!backendUser) return null;
+  return {
+    ...backendUser,
+    id: backendUser.id !== undefined && backendUser.id !== null ? String(backendUser.id) : '',
+    name: backendUser.full_name || backendUser.name || 'Anonymous User',
+    role: backendUser.role || 'volunteer',
+    email: backendUser.email || '',
+  };
 };
 
 export const authService = {
   /**
    * Login with email and password
+   * Flow:
+   * 1. Call POST /auth/login with JSON email/password.
+   * 2. Receive access_token.
+   * 3. Set the token into the existing api client.
+   * 4. Call GET /api/users/me.
+   * 5. Normalize the backend user for existing frontend consumers (full_name -> name).
+   * 6. Preserve backend fields too where useful.
+   * 7. Store the authenticated session safely.
+   * 8. Return the structure expected by AuthContext.
+   * 
    * @param {Object} credentials - { email, password }
    * @returns {Promise<{ user: Object, token: string }>}
    */
@@ -57,47 +59,72 @@ export const authService = {
       throw new Error('Email address and password are required.');
     }
 
-    // Look up in development fixtures first, then in dynamically registered accounts
-    const allUsers = [...DEV_USERS, ...getRegisteredUsers()];
-    const matched = allUsers.find((u) => u.email.toLowerCase() === email);
-
-    if (!matched) {
-      throw new Error('Invalid email or password. Please verify your credentials.');
-    }
-
-    if (matched.password !== password) {
-      throw new Error('Invalid email or password. Please verify your credentials.');
-    }
-
-    // Standard frontend user shape: { id, name, email, role }
-    const user = {
-      id: matched.id,
-      name: matched.name,
-      email: matched.email,
-      role: matched.role
-    };
-
-    const sessionData = {
-      token: `dev-token-${user.id}-${Date.now()}`,
-      user
-    };
-
     try {
-      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
-    } catch (err) {
-      console.warn('[authService] Could not write session to localStorage:', err);
-    }
+      // 1. Call POST /auth/login with JSON email/password
+      const loginRes = await api.post('/auth/login', { email, password });
 
-    return sessionData;
+      const token = loginRes?.access_token;
+      if (!token) {
+        throw new Error('Authentication succeeded but no access token was returned.');
+      }
+
+      // 2. Set token on central API client
+      api.setToken(token);
+
+      // 3. Call GET /api/users/me
+      const meRes = await api.get('/api/users/me');
+
+      // 4. Normalize user model
+      const user = normalizeUser(meRes);
+
+      const sessionData = {
+        token,
+        user
+      };
+
+      // 5. Store session in localStorage
+      try {
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
+      } catch (err) {
+        console.warn('[authService] Could not write session to localStorage:', err);
+      }
+
+      return sessionData;
+    } catch (err) {
+      api.clearToken();
+      if (
+        err.message &&
+        (err.message.includes('Invalid') ||
+          err.message.includes('Incorrect') ||
+          err.message.includes('401'))
+      ) {
+        throw new Error('Invalid email or password. Please verify your credentials.');
+      }
+      if (
+        err.message &&
+        (err.message.includes('Failed to fetch') ||
+          err.message.includes('NetworkError') ||
+          err.message.includes('ECONNREFUSED'))
+      ) {
+        throw new Error('Unable to connect to authentication server. Please check your network connection.');
+      }
+      throw new Error(err.message || 'Authentication failed. Please verify your credentials.');
+    }
   },
 
   /**
    * Register a new volunteer account
+   * Flow:
+   * 1. Call POST /api/auth/register.
+   * 2. Do not invent a fake token.
+   * 3. Return the backend registration result in a form compatible with existing AuthContext behavior.
+   * 4. If the backend does not automatically authenticate after registration, preserve that behavior and let the existing login flow handle authentication.
+   * 
    * @param {Object} userData - { fullName, email, password, phone, location }
-   * @returns {Promise<{ user: Object, token: string }>}
+   * @returns {Promise<{ user: Object, token: null, requiresLogin: boolean }>}
    */
   async register(userData) {
-    const fullName = userData?.fullName?.trim();
+    const fullName = userData?.fullName?.trim() || userData?.full_name?.trim();
     const email = userData?.email?.trim().toLowerCase();
     const password = userData?.password;
 
@@ -105,40 +132,44 @@ export const authService = {
       throw new Error('Full name, email address, and password are required.');
     }
 
-    // Check for existing account
-    const allUsers = [...DEV_USERS, ...getRegisteredUsers()];
-    if (allUsers.some((u) => u.email.toLowerCase() === email)) {
-      throw new Error('An account with this email address already exists.');
-    }
-
-    // Newly registered users receive standard volunteer role per Stage 2 requirements
-    const newUser = {
-      id: `dev-usr-${Date.now()}`,
-      name: fullName,
-      email: email,
-      role: ROLES.VOLUNTEER
-    };
-
-    // Save credentials in development account pool
-    saveRegisteredUser({
-      ...newUser,
-      password: password,
-      phone: userData.phone || '',
-      location: userData.location || ''
-    });
-
-    const sessionData = {
-      token: `dev-token-${newUser.id}-${Date.now()}`,
-      user: newUser
-    };
-
     try {
-      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
-    } catch (err) {
-      console.warn('[authService] Could not write session to localStorage:', err);
-    }
+      const payload = {
+        full_name: fullName,
+        email,
+        password,
+        phone: userData.phone || null,
+        location: userData.location || null,
+        role: userData.role || 'volunteer'
+      };
 
-    return sessionData;
+      // 1. Call POST /api/auth/register
+      const registerRes = await api.post('/api/auth/register', payload);
+
+      // 2. Normalize backend user representation
+      const user = normalizeUser(registerRes);
+
+      // Backend does not issue a JWT upon registration.
+      // Return structured result without fake token.
+      return {
+        user,
+        token: null,
+        requiresLogin: true
+      };
+    } catch (err) {
+      if (
+        err.message &&
+        (err.message.includes('already exists') || err.message.includes('400'))
+      ) {
+        throw new Error(err.message || 'An account with this email address already exists.');
+      }
+      if (
+        err.message &&
+        (err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))
+      ) {
+        throw new Error('Unable to connect to registration server. Please check your network connection.');
+      }
+      throw new Error(err.message || 'Registration failed. Please check your information.');
+    }
   },
 
   /**
@@ -146,6 +177,7 @@ export const authService = {
    * @returns {Promise<{ success: boolean }>}
    */
   async logout() {
+    api.clearToken();
     try {
       localStorage.removeItem(SESSION_STORAGE_KEY);
     } catch (err) {
@@ -155,7 +187,7 @@ export const authService = {
   },
 
   /**
-   * Retrieve active user from development session
+   * Retrieve active user from stored session
    * @returns {Object|null}
    */
   getCurrentUser() {
@@ -170,7 +202,23 @@ export const authService = {
   },
 
   /**
+   * Retrieve stored token from session
+   * @returns {string|null}
+   */
+  getStoredToken() {
+    try {
+      const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      return data?.token || null;
+    } catch {
+      return null;
+    }
+  },
+
+  /**
    * Restore existing session on initial load or browser refresh
+   * Validates token against GET /api/users/me when possible.
    * @returns {Promise<{ user: Object, token: string }|null>}
    */
   async restoreSession() {
@@ -178,11 +226,32 @@ export const authService = {
       const raw = localStorage.getItem(SESSION_STORAGE_KEY);
       if (!raw) return null;
       const session = JSON.parse(raw);
-      if (session?.user && session?.user?.id && session?.user?.role) {
-        return session;
+      if (!session?.token) {
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+        return null;
       }
-      return null;
+
+      // Synchronize token on API client
+      api.setToken(session.token);
+
+      try {
+        // Validate and refresh user profile from backend
+        const meRes = await api.get('/api/users/me');
+        const user = normalizeUser(meRes);
+        const updatedSession = {
+          token: session.token,
+          user
+        };
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(updatedSession));
+        return updatedSession;
+      } catch (err) {
+        console.warn('[authService] Session validation failed on restore:', err.message);
+        api.clearToken();
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+        return null;
+      }
     } catch {
+      api.clearToken();
       return null;
     }
   }
