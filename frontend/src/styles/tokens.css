@@ -1,0 +1,222 @@
+/* ==========================================================================
+   COMMUNITY SKILL BANK — DESIGN SYSTEM TOKENS
+   Theme: Disaster & Emergency Response
+   Primary Accent: Orange (#FF6B00 / #F97316)
+   Primary Style: Dark theme with semi-opaque glass panels & orange accents
+   Secondary Style: High-contrast professional light theme
+   ========================================================================== */
+
+:root {
+  /* Brand Primitives */
+  --color-orange-50: #FFF7ED;
+  --color-orange-100: #FFEDD5;
+  --color-orange-200: #FED7AA;
+  --color-orange-300: #FDBA74;
+  --color-orange-400: #FB923C;
+  --color-orange-500: #F97316;
+  --color-orange-600: #EA580C;
+  --color-orange-700: #C2410C;
+  --color-orange-800: #9A3412;
+  --color-orange-900: #7C2D12;
+  --color-orange-glow: rgba(249, 115, 22, 0.25);
+
+  /* Status Colors */
+  --color-critical: #EF4444;
+  --color-critical-bg: rgba(239, 68, 68, 0.15);
+  --color-critical-border: rgba(239, 68, 68, 0.35);
+
+  --color-warning: #F59E0B;
+  --color-warning-bg: rgba(245, 158, 11, 0.15);
+  --color-warning-border: rgba(245, 158, 11, 0.35);
+
+  --color-success: #10B981;
+  --color-success-bg: rgba(16, 185, 129, 0.15);
+  --color-success-border: rgba(16, 185, 129, 0.35);
+
+  --color-info: #3B82F6;
+  --color-info-bg: rgba(59, 130, 246, 0.15);
+  --color-info-border: rgba(59, 130, 246, 0.35);
+
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Font Sizes */
+  --font-xs: 0.75rem;
+  --font-sm: 0.875rem;
+  --font-base: 1rem;
+  --font-lg: 1.125rem;
+  --font-xl: 1.25rem;
+  --font-2xl: 1.5rem;
+  --font-3xl: 1.875rem;
+  --font-4xl: 2.25rem;
+  --font-5xl: 3rem;
+
+  /* Spacing */
+  --space-1: 0.25rem;  /* 4px */
+  --space-2: 0.5rem;   /* 8px */
+  --space-3: 0.75rem;  /* 12px */
+  --space-4: 1rem;     /* 16px */
+  --space-5: 1.25rem;  /* 20px */
+  --space-6: 1.5rem;   /* 24px */
+  --space-8: 2rem;     /* 32px */
+  --space-10: 2.5rem;  /* 40px */
+  --space-12: 3rem;    /* 48px */
+  --space-16: 4rem;    /* 64px */
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Layout dimensions */
+  --sidebar-width: 270px;
+  --sidebar-collapsed-width: 76px;
+  --topbar-height: 68px;
+
+  /* Transition speeds */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 350ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Primary Brand Gradients */
+  --gradient-primary: linear-gradient(135deg, #FF6B00 0%, #EA580C 100%);
+  --gradient-primary-hover: linear-gradient(135deg, #FF7D1A 0%, #F97316 100%);
+  --gradient-primary-soft: linear-gradient(135deg, rgba(255, 107, 0, 0.14) 0%, rgba(234, 88, 12, 0.05) 100%);
+  --gradient-emergency: linear-gradient(135deg, #DC2626 0%, #EA580C 100%);
+}
+
+/* ==========================================================================
+   DARK THEME (Default & Primary Brand Aesthetic)
+   ========================================================================== */
+[data-theme="dark"],
+:root:not([data-theme="light"]) {
+  color-scheme: dark;
+
+  /* Surfaces & Backgrounds */
+  --bg-app: #080B10;
+  --bg-surface: #0E131F;
+  --bg-surface-elevated: #151D2E;
+  --bg-surface-active: #1D283E;
+  --bg-glass: rgba(14, 19, 31, 0.82);
+  --bg-glass-elevated: rgba(21, 29, 46, 0.88);
+  --bg-input: rgba(10, 14, 22, 0.8);
+  --bg-overlay: rgba(4, 7, 12, 0.75);
+
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.11);
+  --border-highlight: rgba(249, 115, 22, 0.4);
+  --border-glass: rgba(255, 255, 255, 0.08);
+
+  /* Text Colors */
+  --text-primary: #F8FAFC;
+  --text-secondary: #CBD5E1;
+  --text-muted: #64748B;
+  --text-inverse: #0F172A;
+
+  /* Brand Accents */
+  --color-primary: #F97316;
+  --color-primary-hover: #FB923C;
+  --color-primary-active: #EA580C;
+  --color-primary-contrast: #FFFFFF;
+  --color-secondary: #334155;
+  --color-secondary-hover: #475569;
+
+  /* Status Tokens */
+  --badge-critical-bg: rgba(239, 68, 68, 0.15);
+  --badge-critical-text: #FCA5A5;
+  --badge-critical-border: rgba(239, 68, 68, 0.3);
+
+  --badge-warning-bg: rgba(245, 158, 11, 0.15);
+  --badge-warning-text: #FCD34D;
+  --badge-warning-border: rgba(245, 158, 11, 0.3);
+
+  --badge-success-bg: rgba(16, 185, 129, 0.15);
+  --badge-success-text: #6EE7B7;
+  --badge-success-border: rgba(16, 185, 129, 0.3);
+
+  --badge-info-bg: rgba(59, 130, 246, 0.15);
+  --badge-info-text: #93C5FD;
+  --badge-info-border: rgba(59, 130, 246, 0.3);
+
+  --badge-neutral-bg: rgba(148, 163, 184, 0.12);
+  --badge-neutral-text: #CBD5E1;
+  --badge-neutral-border: rgba(148, 163, 184, 0.2);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.65);
+  --shadow-glow: 0 0 24px rgba(249, 115, 22, 0.2);
+  --shadow-orange-sm: 0 2px 10px rgba(249, 115, 22, 0.25);
+  --shadow-orange-lg: 0 8px 30px rgba(249, 115, 22, 0.35);
+}
+
+/* ==========================================================================
+   LIGHT THEME (Professional High-Contrast Emergency Tone)
+   ========================================================================== */
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Surfaces & Backgrounds */
+  --bg-app: #F4F6F9;
+  --bg-surface: #FFFFFF;
+  --bg-surface-elevated: #F8FAFC;
+  --bg-surface-active: #EDF2F7;
+  --bg-glass: rgba(255, 255, 255, 0.88);
+  --bg-glass-elevated: rgba(255, 255, 255, 0.95);
+  --bg-input: #FFFFFF;
+  --bg-overlay: rgba(15, 23, 42, 0.6);
+
+  /* Borders */
+  --border-subtle: #E2E8F0;
+  --border-default: #CBD5E1;
+  --border-highlight: rgba(234, 88, 12, 0.6);
+  --border-glass: rgba(226, 232, 240, 0.8);
+
+  /* Text Colors */
+  --text-primary: #0F172A;
+  --text-secondary: #334155;
+  --text-muted: #64748B;
+  --text-inverse: #FFFFFF;
+
+  /* Brand Accents */
+  --color-primary: #EA580C;
+  --color-primary-hover: #C2410C;
+  --color-primary-active: #9A3412;
+  --color-primary-contrast: #FFFFFF;
+  --color-secondary: #E2E8F0;
+  --color-secondary-hover: #CBD5E1;
+
+  /* Status Tokens */
+  --badge-critical-bg: #FEF2F2;
+  --badge-critical-text: #DC2626;
+  --badge-critical-border: #FCA5A5;
+
+  --badge-warning-bg: #FFFBEB;
+  --badge-warning-text: #B45309;
+  --badge-warning-border: #FCD34D;
+
+  --badge-success-bg: #ECFDF5;
+  --badge-success-text: #047857;
+  --badge-success-border: #6EE7B7;
+
+  --badge-info-bg: #EFF6FF;
+  --badge-info-text: #1D4ED8;
+  --badge-info-border: #93C5FD;
+
+  --badge-neutral-bg: #F1F5F9;
+  --badge-neutral-text: #475569;
+  --badge-neutral-border: #CBD5E1;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 10px 25px rgba(15, 23, 42, 0.12);
+  --shadow-glow: 0 0 20px rgba(234, 88, 12, 0.15);
+  --shadow-orange-sm: 0 2px 10px rgba(234, 88, 12, 0.2);
+  --shadow-orange-lg: 0 8px 24px rgba(234, 88, 12, 0.25);
+}
