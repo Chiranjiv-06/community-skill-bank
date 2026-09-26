@@ -98,7 +98,7 @@ export const authService = {
           err.message.includes('Incorrect') ||
           err.message.includes('401'))
       ) {
-        throw new Error('Invalid email or password. Please verify your credentials.');
+        throw new Error('Invalid email or password. Please check your credentials or register first.');
       }
       if (
         err.message &&
@@ -108,7 +108,7 @@ export const authService = {
       ) {
         throw new Error('Unable to connect to authentication server. Please check your network connection.');
       }
-      throw new Error(err.message || 'Authentication failed. Please verify your credentials.');
+      throw new Error(err.message || 'Authentication failed. Please check your credentials or register first.');
     }
   },
 

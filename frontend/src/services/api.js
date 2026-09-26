@@ -47,10 +47,11 @@ class ApiClient {
     try {
       const response = await fetch(url, config);
 
-      // Handle 401 Unauthorized globally
+      // Handle 401 Unauthorized globally for authenticated/protected requests
       if (response.status === 401) {
         console.warn('[ApiClient] 401 Unauthorized received. Session expired or unauthenticated.');
-        if (typeof window !== 'undefined') {
+        const isLoginEndpoint = endpoint === '/auth/login' || endpoint === 'auth/login';
+        if (!isLoginEndpoint && typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('auth:unauthorized'));
         }
       }

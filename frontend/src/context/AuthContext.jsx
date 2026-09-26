@@ -87,7 +87,6 @@ export const AuthProvider = ({ children }) => {
    * @param {Object} credentials - { email, password }
    */
   const login = async (credentials) => {
-    setLoading(true);
     setAuthStatus(AUTH_STATES.AUTHENTICATING);
     setError(null);
     try {
@@ -103,8 +102,6 @@ export const AuthProvider = ({ children }) => {
       setError(err.message || 'Authentication failed');
       setAuthStatus(AUTH_STATES.ERROR);
       throw err;
-    } finally {
-      setLoading(false);
     }
   };
 
