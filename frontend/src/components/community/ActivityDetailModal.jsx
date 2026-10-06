@@ -30,7 +30,8 @@ export const ActivityDetailModal = ({
   isAdmin = false,
   onJoin = null,
   onLeave = null,
-  onStatusChange = null
+  onStatusChange = null,
+  onAttendanceChange = null
 }) => {
   if (!isOpen || !activity) return null;
 
@@ -216,9 +217,24 @@ export const ActivityDetailModal = ({
                       </div>
                     )}
                   </div>
-                  <Badge variant="success" style={{ fontSize: '10px' }}>
-                    Confirmed
-                  </Badge>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Badge
+                      variant={p.status === 'attended' || p.status === 'completed' ? 'success' : p.status === 'no_show' ? 'critical' : 'primary'}
+                      style={{ fontSize: '10px' }}
+                    >
+                      {p.status ? p.status.replace('_', ' ').toUpperCase() : 'CONFIRMED'}
+                    </Badge>
+                    {isAdmin && onAttendanceChange && p.status !== 'attended' && p.status !== 'completed' && (
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        style={{ fontSize: '11px', padding: '2px 8px' }}
+                        onClick={() => onAttendanceChange(activity.id, p.id || p.participantId, 'attended', 3.0)}
+                      >
+                        Mark Attended
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

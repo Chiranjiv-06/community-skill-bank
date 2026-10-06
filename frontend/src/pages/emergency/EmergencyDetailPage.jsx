@@ -348,7 +348,7 @@ export const EmergencyDetailPage = () => {
   const reqCount = emergency.requirements?.length || 0;
 
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+    <div className="emergency-management-container" style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', boxSizing: 'border-box', minWidth: 0 }}>
       {/* Back Link */}
       <div style={{ marginBottom: 'var(--space-4)' }}>
         <Link

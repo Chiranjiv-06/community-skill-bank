@@ -66,11 +66,15 @@ export const EmergencyCard = ({
   return (
     <Card
       hoverable
+      className="emergency-card"
       style={{
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
         padding: 'var(--space-5)',
+        minWidth: 0,
+        maxWidth: '100%',
+        boxSizing: 'border-box',
         borderLeft: `4px solid ${
           emergency.severity === 'critical'
             ? 'var(--color-critical)'
@@ -82,7 +86,7 @@ export const EmergencyCard = ({
         }`
       }}
     >
-      <div>
+      <div style={{ minWidth: 0, maxWidth: '100%', boxSizing: 'border-box' }}>
         {/* Top Badges & Meta */}
         <div
           style={{
@@ -91,10 +95,11 @@ export const EmergencyCard = ({
             justifyContent: 'space-between',
             gap: 'var(--space-2)',
             marginBottom: 'var(--space-3)',
-            flexWrap: 'wrap'
+            flexWrap: 'wrap',
+            minWidth: 0
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap', minWidth: 0 }}>
             <EmergencySeverityBadge severity={emergency.severity} />
             <EmergencyStatusBadge status={emergency.status} />
           </div>
@@ -105,7 +110,8 @@ export const EmergencyCard = ({
               color: 'var(--text-muted)',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px'
+              gap: '4px',
+              flexShrink: 0
             }}
           >
             <Clock size={12} />
@@ -116,12 +122,15 @@ export const EmergencyCard = ({
         {/* Title */}
         <h3
           style={{
-            fontSize: 'var(--font-lg)',
+            fontSize: '1.15rem',
             fontWeight: 700,
             color: 'var(--text-primary)',
             marginBottom: 'var(--space-2)',
             lineHeight: 1.35,
-            cursor: 'pointer'
+            cursor: 'pointer',
+            minWidth: 0,
+            overflowWrap: 'anywhere',
+            wordBreak: 'break-word'
           }}
           onClick={handleViewDetails}
         >
@@ -131,21 +140,30 @@ export const EmergencyCard = ({
         {/* Location & Sector */}
         <div
           style={{
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
-            fontSize: 'var(--font-sm)',
+            fontSize: 'var(--font-xs)',
             color: 'var(--color-primary)',
             marginBottom: 'var(--space-3)',
-            cursor: 'pointer'
+            padding: '4px 10px',
+            background: 'rgba(249, 115, 22, 0.08)',
+            border: '1px solid rgba(249, 115, 22, 0.2)',
+            borderRadius: 'var(--radius-sm)',
+            cursor: 'pointer',
+            minWidth: 0,
+            maxWidth: '100%',
+            boxSizing: 'border-box'
           }}
           onClick={handleViewMap}
           title="Click to view tactical proximity map"
         >
-          <MapPin size={15} style={{ flexShrink: 0 }} />
-          <span style={{ fontWeight: 600 }}>{emergency.location}</span>
+          <MapPin size={13} style={{ flexShrink: 0 }} />
+          <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {emergency.location}
+          </span>
           {(emergency.latitude !== null && emergency.latitude !== undefined && emergency.longitude !== null && emergency.longitude !== undefined) && (
-            <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-xs)', marginLeft: '4px' }}>
+            <span style={{ color: 'var(--text-muted)', fontSize: '11px', marginLeft: '4px', flexShrink: 0 }}>
               ({Number(emergency.latitude).toFixed(3)}, {Number(emergency.longitude).toFixed(3)})
             </span>
           )}
@@ -154,14 +172,17 @@ export const EmergencyCard = ({
         {/* Description */}
         <p
           style={{
-            fontSize: 'var(--font-sm)',
+            fontSize: 'var(--font-xs)',
             color: 'var(--text-secondary)',
             lineHeight: 1.5,
             marginBottom: 'var(--space-4)',
             display: '-webkit-box',
-            WebkitLineClamp: 3,
+            WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            minWidth: 0,
+            overflowWrap: 'anywhere',
+            wordBreak: 'break-word'
           }}
         >
           {emergency.description}
@@ -263,14 +284,16 @@ export const EmergencyCard = ({
           paddingTop: 'var(--space-3)',
           marginTop: 'var(--space-2)',
           gap: 'var(--space-2)',
-          flexWrap: 'wrap'
+          flexWrap: 'wrap',
+          minWidth: 0,
+          boxSizing: 'border-box'
         }}
       >
-        <div style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)' }}>
+        <div style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)', flexShrink: 0 }}>
           Created: {formattedCreated}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap', minWidth: 0 }}>
           {isAdmin && onEdit && (
             <Button
               variant="outline"

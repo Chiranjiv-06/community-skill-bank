@@ -132,7 +132,7 @@ export const AppRoutes = () => {
             <Route path="matching" element={<MatchingPage />} />
             <Route path="recommendations" element={<RecommendationsPage />} />
             <Route path="response-monitoring" element={<ResponseMonitoringPage />} />
-            <Route path="volunteers" element={<VolunteerDirectoryPage />} />
+            <Route path="volunteers" element={<Navigate to="/admin/verification" replace />} />
             <Route path="skills" element={<AdminSkillsPage />} />
             <Route path="verification" element={<AdminVerificationPage />} />
             <Route path="verification-queue" element={<VerificationQueuePage />} />

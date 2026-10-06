@@ -41,6 +41,13 @@ export const NotificationProvider = ({ children }) => {
   useEffect(() => {
     fetchNotifications();
 
+    // Connect WebSocket if authenticated
+    if (isAuthenticated) {
+      realtimeService.connect();
+    } else {
+      realtimeService.disconnect();
+    }
+
     // Subscribe to notification storage mutations
     const unsubscribeNotifications = notificationService.subscribe(() => {
       fetchNotifications();
@@ -61,7 +68,7 @@ export const NotificationProvider = ({ children }) => {
       unsubscribeRealtime();
       unsubscribeConnection();
     };
-  }, [fetchNotifications]);
+  }, [fetchNotifications, isAuthenticated]);
 
   const markAsRead = async (id) => {
     await notificationService.markAsRead(id);

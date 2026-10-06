@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Flame, Edit3, AlertCircle } from 'lucide-react';
+import { Flame, Edit3, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
+import Badge from '../common/Badge';
 import Input from '../common/Input';
 import Select from '../common/Select';
 import Textarea from '../common/Textarea';
@@ -11,6 +12,7 @@ import {
   EMERGENCY_SEVERITIES,
   SEVERITY_LABELS
 } from '../../data/devEmergencies';
+import locationService from '../../services/locationService';
 
 /**
  * Reusable Emergency Create & Edit Modal
@@ -36,6 +38,7 @@ export const EmergencyFormModal = ({
   });
 
   const [errors, setErrors] = useState({});
+  const [geoStatus, setGeoStatus] = useState({ status: 'idle', address: '', message: '' });
 
   useEffect(() => {
     if (emergency) {
@@ -49,6 +52,13 @@ export const EmergencyFormModal = ({
         status: emergency.status || 'open',
         requiredVolunteers: String(emergency.requiredVolunteers || '10')
       });
+      if (emergency.latitude && emergency.longitude) {
+        setGeoStatus({
+          status: 'resolved',
+          address: emergency.location || '',
+          message: 'Location verified'
+        });
+      }
     } else {
       setFormData({
         title: '',
@@ -60,12 +70,45 @@ export const EmergencyFormModal = ({
         status: 'open',
         requiredVolunteers: '10'
       });
+      setGeoStatus({ status: 'idle', address: '', message: '' });
     }
     setErrors({});
   }, [emergency, isOpen]);
 
   const handleChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value };
+
+      if (field === 'latitude' || field === 'longitude') {
+        const latVal = field === 'latitude' ? value : prev.latitude;
+        const lngVal = field === 'longitude' ? value : prev.longitude;
+        const lat = Number(latVal);
+        const lng = Number(lngVal);
+
+        if (!latVal || !lngVal) {
+          setGeoStatus({ status: 'idle', address: '', message: '' });
+        } else if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+          setGeoStatus({ status: 'error', address: '', message: 'Coordinates out of bounds (-90..90, -180..180)' });
+        } else {
+          setGeoStatus({ status: 'loading', address: '', message: 'Resolving address from coordinates...' });
+          locationService.reverseGeocode(lat, lng).then((resolved) => {
+            if (resolved) {
+              setGeoStatus({ status: 'resolved', address: resolved, message: 'Location detected' });
+              if (!next.location || next.location.startsWith('Sector Zone')) {
+                setFormData((curr) => ({ ...curr, location: resolved }));
+              }
+            } else {
+              setGeoStatus({ status: 'error', address: '', message: 'Location lookup failed' });
+            }
+          }).catch(() => {
+            setGeoStatus({ status: 'error', address: '', message: 'Reverse geocoding error' });
+          });
+        }
+      }
+
+      return next;
+    });
+
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: null }));
     }
@@ -209,9 +252,9 @@ export const EmergencyFormModal = ({
         />
 
         {/* Coordinates Row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+        <div className="emergency-coordinate-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 'var(--space-3)' }}>
           <Input
-            label="Latitude (Profile field only)"
+            label="Latitude"
             id="emergency-latitude-input"
             type="number"
             step="any"
@@ -222,7 +265,7 @@ export const EmergencyFormModal = ({
             helperText="-90 to 90"
           />
           <Input
-            label="Longitude (Profile field only)"
+            label="Longitude"
             id="emergency-longitude-input"
             type="number"
             step="any"
@@ -234,8 +277,61 @@ export const EmergencyFormModal = ({
           />
         </div>
 
+        {/* Visual Location & Coordinates Relationship Panel */}
+        {(formData.latitude || formData.longitude || geoStatus.status !== 'idle') && (
+          <div
+            style={{
+              padding: 'var(--space-3)',
+              background: 'var(--bg-surface-elevated)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border-default)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+              marginTop: 'calc(var(--space-2) * -1)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+              <span style={{ fontSize: 'var(--font-xs)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                Location Status:
+              </span>
+              {geoStatus.status === 'loading' && (
+                <Badge variant="info">Resolving Physical Address...</Badge>
+              )}
+              {geoStatus.status === 'resolved' && (
+                <Badge variant="success">
+                  <CheckCircle size={12} />
+                  <span>Location Detected</span>
+                </Badge>
+              )}
+              {geoStatus.status === 'error' && (
+                <Badge variant="warning">
+                  <AlertTriangle size={12} />
+                  <span>{geoStatus.message || 'Location Unresolved'}</span>
+                </Badge>
+              )}
+              {geoStatus.status === 'idle' && (
+                <Badge variant="neutral">Coordinates Pending</Badge>
+              )}
+            </div>
+
+            {geoStatus.address && (
+              <div style={{ fontSize: 'var(--font-xs)', color: 'var(--text-primary)' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Automatically Resolved Location: </span>
+                <strong style={{ color: 'var(--color-primary)' }}>{geoStatus.address}</strong>
+              </div>
+            )}
+
+            {formData.latitude && formData.longitude && !isNaN(Number(formData.latitude)) && !isNaN(Number(formData.longitude)) && (
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                Coordinates: {locationService.formatCoordinates(formData.latitude, formData.longitude)}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Severity, Status, Required Volunteers */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 'var(--space-3)' }}>
+        <div className="emergency-details-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 'var(--space-3)' }}>
           {/* Severity */}
           <Select
             label="Severity"

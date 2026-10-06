@@ -422,7 +422,7 @@ export const LandingPage = () => {
               <li><Link to="/login" className="footer-link">Responder Login</Link></li>
               <li><a href="#how-it-works" className="footer-link">How It Works</a></li>
               <li><a href="#capabilities" className="footer-link">Capabilities</a></li>
-              <li><span className="footer-link" style={{ opacity: 0.6 }}>Stage 1 Foundation</span></li>
+              <li><span className="footer-link" style={{ opacity: 0.6 }}>Operational Incident Command</span></li>
             </ul>
           </div>
         </div>

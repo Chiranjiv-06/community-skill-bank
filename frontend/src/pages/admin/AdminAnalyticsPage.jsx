@@ -373,7 +373,7 @@ export const AdminAnalyticsPage = () => {
               <span>Skill & Capability Analytics</span>
             </div>
             <div className="analytics-section-subtitle">
-              Stage 4 skill categories, proficiency tiers, and surge demand fulfillment
+              Disaster skill categories, proficiency tiers, and surge demand fulfillment
             </div>
 
             <div className="analytics-grid-2">
@@ -463,7 +463,7 @@ export const AdminAnalyticsPage = () => {
             <div className="analytics-grid-2">
               <DonutChart
                 title="Assignment Lifecycle Distribution"
-                subtitle="Stage 7 volunteer dispatch progression"
+                subtitle="Operational volunteer dispatch progression"
                 data={data.response.assignmentBreakdown}
                 centerLabel="TASKS"
               />
@@ -488,7 +488,7 @@ export const AdminAnalyticsPage = () => {
                 <span>Community Activities</span>
               </div>
               <div className="analytics-section-subtitle">
-                Stage 9 disaster drills, sandbagging events, and workshops
+                Community disaster drills, sandbagging events, and resilience workshops
               </div>
 
               <DonutChart
@@ -518,7 +518,7 @@ export const AdminAnalyticsPage = () => {
                 <span>Training & Credential Trust</span>
               </div>
               <div className="analytics-section-subtitle">
-                Stage 8 certification verification compliance and trust levels
+                Certification verification compliance and verified trust levels
               </div>
 
               <DonutChart
@@ -551,7 +551,7 @@ export const AdminAnalyticsPage = () => {
               <span>Notification Operations</span>
             </div>
             <div className="analytics-section-subtitle">
-              Stage 10 dispatch alerts, broadcast severities, and recipient read ratios
+              Emergency dispatch alerts, broadcast severities, and recipient read ratios
             </div>
 
             <div className="analytics-grid-3">

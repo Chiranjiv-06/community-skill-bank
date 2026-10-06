@@ -45,12 +45,14 @@ export const CertificationCard = ({
           : '4px solid var(--color-critical)',
         display: 'flex',
         flexDirection: 'column',
+        justifyContent: 'space-between',
+        height: '100%',
         gap: 'var(--spacing-md)'
       }}
     >
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--spacing-md)', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: '240px' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
             <Badge variant="primary" style={{ fontSize: '11px' }}>
               {certification.category}

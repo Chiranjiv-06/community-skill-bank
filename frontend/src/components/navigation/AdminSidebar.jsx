@@ -8,7 +8,6 @@ import {
   GitMerge,
   Sparkles,
   Activity,
-  Users2,
   Zap,
   CheckCheck,
   ClipboardList,
@@ -41,6 +40,7 @@ export const AdminSidebar = ({
   isCollapsed = false,
   onToggleCollapse = () => {},
   isMobile = false,
+  isOpen = false,
   onCloseMobile = () => {}
 }) => {
   const { theme, toggleTheme } = useTheme();
@@ -54,8 +54,10 @@ export const AdminSidebar = ({
 
   return (
     <aside
-      className={`app-sidebar ${isCollapsed && !isMobile ? 'is-collapsed' : ''} ${isMobile ? 'sidebar-mobile-drawer is-open' : ''}`}
+      className={`app-sidebar sidebar ${isCollapsed && !isMobile ? 'is-collapsed' : ''} ${isMobile ? 'sidebar-mobile-drawer' : ''} ${isMobile && isOpen ? 'is-open' : ''}`}
       aria-label="Emergency Incident Command Navigation"
+      aria-hidden={isMobile && !isOpen}
+      inert={isMobile && !isOpen}
     >
       {/* Brand Header */}
       <div className="sidebar-header">
@@ -84,7 +86,7 @@ export const AdminSidebar = ({
       </div>
 
       {/* Navigation Sections */}
-      <div className="sidebar-nav-container">
+      <div className="sidebar-nav-container sidebar-navigation">
         {/* Core Dashboard */}
         <ul className="sidebar-nav-list">
           <NavItem
@@ -144,13 +146,6 @@ export const AdminSidebar = ({
         <div>
           <div className="sidebar-section-title">VOLUNTEERS</div>
           <ul className="sidebar-nav-list">
-            <NavItem
-              to="/admin/volunteers"
-              label="Volunteer Directory"
-              icon={<Users2 size={19} />}
-              isCollapsed={isCollapsed && !isMobile}
-              onClick={isMobile ? onCloseMobile : undefined}
-            />
             <NavItem
               to="/admin/skills"
               label="Skills Catalog"
@@ -299,10 +294,10 @@ export const AdminSidebar = ({
       {/* Footer Quick Controls */}
       <div className="sidebar-footer">
         <button
-          className="nav-item-link"
-          style={{ width: '100%', border: 'none', background: 'transparent' }}
+          type="button"
+          className="nav-item-link sidebar-footer-btn sidebar-footer-btn-theme"
           onClick={toggleTheme}
-          title="Toggle Theme"
+          title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
         >
           <span className="nav-icon">{theme === 'dark' ? <Sun size={19} /> : <Moon size={19} />}</span>
           {(!isCollapsed || isMobile) && (
@@ -311,8 +306,8 @@ export const AdminSidebar = ({
         </button>
 
         <button
-          className="nav-item-link"
-          style={{ width: '100%', border: 'none', background: 'transparent', color: 'var(--color-critical)' }}
+          type="button"
+          className="nav-item-link sidebar-footer-btn sidebar-footer-btn-logout"
           onClick={handleLogout}
           title="Logout"
         >

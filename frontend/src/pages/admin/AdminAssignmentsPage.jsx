@@ -22,6 +22,7 @@ import LoadingState from '../../components/states/LoadingState';
 import EmptyState from '../../components/states/EmptyState';
 import AssignmentCard from '../../components/assignment/AssignmentCard';
 import AssignmentCreationModal from '../../components/assignment/AssignmentCreationModal';
+import AssignmentFeedbackModal from '../../components/assignment/AssignmentFeedbackModal';
 import assignmentService from '../../services/assignmentService';
 import emergencyService from '../../services/emergencyService';
 import {
@@ -40,6 +41,10 @@ export const AdminAssignmentsPage = () => {
   // Create Assignment Modal
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Feedback Modal State
+  const [feedbackAssignment, setFeedbackAssignment] = useState(null);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
   // Delete Assignment Confirmation
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -191,7 +196,7 @@ export const AdminAssignmentsPage = () => {
       >
         <Info size={18} color="var(--color-primary)" style={{ flexShrink: 0 }} />
         <div>
-          <strong style={{ color: 'var(--text-primary)' }}>Assignment Lifecycle (Stage 7):</strong> Admin creates assignments from matched candidates. State advances from <strong>Assigned → Accepted → In Progress → Completed</strong>.
+          <strong style={{ color: 'var(--text-primary)' }}>Assignment Lifecycle Management:</strong> Incident commanders dispatch matched responders to emergency sites. Mission state advances through <strong>Assigned → Accepted → In Progress → Completed</strong>.
         </div>
       </div>
 
@@ -412,10 +417,32 @@ export const AdminAssignmentsPage = () => {
               assignment={assignment}
               isAdmin={true}
               onDelete={handleOpenDelete}
+              onFeedback={(asg) => {
+                setFeedbackAssignment(asg);
+                setIsFeedbackModalOpen(true);
+              }}
             />
           ))}
         </div>
       )}
+
+      {/* Feedback Modal for Completed Assignment */}
+      <AssignmentFeedbackModal
+        isOpen={isFeedbackModalOpen}
+        onClose={() => {
+          setIsFeedbackModalOpen(false);
+          setFeedbackAssignment(null);
+        }}
+        assignment={feedbackAssignment}
+        onSuccess={() => {
+          fetchAssignments();
+          setNotification({
+            type: 'success',
+            message: 'Supervisor feedback and verified hours recorded successfully!'
+          });
+          setTimeout(() => setNotification(null), 5000);
+        }}
+      />
 
       {/* Create Assignment Modal */}
       <AssignmentCreationModal

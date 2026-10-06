@@ -10,10 +10,7 @@ import {
   CheckCheck,
   Radio,
   ExternalLink,
-  Flame,
-  ClipboardList,
-  Sparkles,
-  X
+  Sparkles
 } from 'lucide-react';
 
 /**
@@ -62,16 +59,18 @@ export const NotificationCenterDropdown = () => {
   const fullConsoleLink = role === 'admin' ? '/admin/notifications' : '/volunteer/notifications';
 
   return (
-    <div style={{ position: 'relative' }} ref={dropdownRef}>
+    <div className="notification-dropdown-anchor" ref={dropdownRef}>
       {/* Bell Trigger Button */}
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
+        aria-expanded={isOpen}
+        aria-haspopup="dialog"
         title="Alerts & Real-Time Notifications"
         style={{
           background: 'none',
           border: 'none',
-          color: isOpen ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+          color: isOpen ? 'var(--color-primary)' : 'var(--text-secondary)',
           cursor: 'pointer',
           padding: '8px',
           borderRadius: 'var(--radius-sm)',
@@ -101,7 +100,7 @@ export const NotificationCenterDropdown = () => {
               alignItems: 'center',
               justifyContent: 'center',
               padding: '0 4px',
-              border: '2px solid var(--color-surface)',
+              border: '2px solid var(--bg-surface)',
               animation: 'pulse 2s infinite'
             }}
           >
@@ -113,21 +112,9 @@ export const NotificationCenterDropdown = () => {
       {/* Dropdown Popover */}
       {isOpen && (
         <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 8px)',
-            right: 0,
-            width: '380px',
-            maxWidth: '90vw',
-            background: 'var(--color-surface)',
-            border: '1px solid var(--color-border-subtle)',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.45)',
-            zIndex: 1000,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}
+          className="notification-dropdown-panel"
+          role="dialog"
+          aria-label="Notifications and alerts"
         >
           {/* Header */}
           <div
@@ -233,7 +220,7 @@ export const NotificationCenterDropdown = () => {
           {/* Notifications Scroll List */}
           <div
             style={{
-              maxHeight: '340px',
+              maxHeight: 'min(340px, calc(100dvh - 250px))',
               overflowY: 'auto',
               display: 'flex',
               flexDirection: 'column'

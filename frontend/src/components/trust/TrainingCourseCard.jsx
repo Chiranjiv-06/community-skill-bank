@@ -4,7 +4,6 @@ import Badge from '../common/Badge';
 import Button from '../common/Button';
 import TrainingStatusBadge from './TrainingStatusBadge';
 import {
-  GraduationCap,
   Clock,
   Layers,
   Award,
@@ -21,7 +20,8 @@ export const TrainingCourseCard = ({
   course,
   onStartCourse = null,
   onContinueCourse = null,
-  onViewDetails = null
+  onViewDetails = null,
+  typeBadge = null
 }) => {
   if (!course) return null;
 
@@ -48,6 +48,14 @@ export const TrainingCourseCard = ({
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--spacing-sm)', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {typeBadge && (
+            <Badge
+              variant={typeBadge === 'DRILL' ? 'warning' : typeBadge === 'WORKSHOP' ? 'primary' : 'neutral'}
+              style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em' }}
+            >
+              {typeBadge}
+            </Badge>
+          )}
           <Badge variant="primary" style={{ fontSize: '11px' }}>
             {course.category}
           </Badge>

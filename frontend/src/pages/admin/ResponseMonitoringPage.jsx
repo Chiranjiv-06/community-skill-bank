@@ -90,7 +90,7 @@ export const ResponseMonitoringPage = () => {
   }
 
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+    <div className="emergency-management-container" style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', boxSizing: 'border-box', minWidth: 0 }}>
       {/* Page Header */}
       <PageHeader
         title="Field Response Operations Monitoring"

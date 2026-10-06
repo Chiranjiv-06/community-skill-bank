@@ -27,7 +27,8 @@ export const AssignmentCard = ({
   onRespond = null, // (assignment) => void
   onStart = null,   // (assignment) => void
   onComplete = null,// (assignment) => void
-  onDelete = null   // (assignment) => void
+  onDelete = null,  // (assignment) => void
+  onFeedback = null // (assignment) => void
 }) => {
   if (!assignment) return null;
 
@@ -288,6 +289,18 @@ export const AssignmentCard = ({
               <CheckCircle size={14} />
               Mission Concluded
             </span>
+          )}
+
+          {/* Admin Feedback for Completed Missions */}
+          {isAdmin && assignment.status === 'completed' && onFeedback && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onFeedback(assignment)}
+              icon={<ShieldCheck size={14} />}
+            >
+              Feedback / Hours
+            </Button>
           )}
 
           {/* Admin Actions */}

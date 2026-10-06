@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import Topbar from './Topbar';
 import OfflineBanner from '../sync/OfflineBanner';
 
@@ -9,6 +10,7 @@ import OfflineBanner from '../sync/OfflineBanner';
 export const AppShell = ({ sidebar: SidebarComponent, children }) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const location = useLocation();
 
   const toggleSidebarCollapse = () => {
     setIsSidebarCollapsed((prev) => !prev);
@@ -18,13 +20,37 @@ export const AppShell = ({ sidebar: SidebarComponent, children }) => {
     setIsMobileDrawerOpen((prev) => !prev);
   };
 
+  // Automatically close mobile drawer and clear any overlay when navigating routes
+  useEffect(() => {
+    setIsMobileDrawerOpen(false);
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    if (!isMobileDrawerOpen) return undefined;
+
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setIsMobileDrawerOpen(false);
+    };
+    const closeOnDesktop = () => {
+      if (window.innerWidth > 768) setIsMobileDrawerOpen(false);
+    };
+
+    window.addEventListener('keydown', closeOnEscape);
+    window.addEventListener('resize', closeOnDesktop);
+    return () => {
+      window.removeEventListener('keydown', closeOnEscape);
+      window.removeEventListener('resize', closeOnDesktop);
+    };
+  }, [isMobileDrawerOpen]);
+
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${isSidebarCollapsed ? 'is-sidebar-collapsed' : ''}`}>
       {/* Mobile Drawer Overlay */}
       <div
         className={`mobile-overlay ${isMobileDrawerOpen ? 'is-open' : ''}`}
         onClick={() => setIsMobileDrawerOpen(false)}
-        aria-hidden="true"
+        aria-hidden={!isMobileDrawerOpen}
+        style={{ pointerEvents: isMobileDrawerOpen ? 'auto' : 'none' }}
       />
 
       {/* Main Desktop Sidebar */}
@@ -36,6 +62,7 @@ export const AppShell = ({ sidebar: SidebarComponent, children }) => {
       {/* Mobile Off-canvas Drawer */}
       <SidebarComponent
         isMobile={true}
+        isOpen={isMobileDrawerOpen}
         onCloseMobile={() => setIsMobileDrawerOpen(false)}
         isCollapsed={false}
       />
@@ -44,7 +71,7 @@ export const AppShell = ({ sidebar: SidebarComponent, children }) => {
       <div className="app-main-layout">
         <Topbar
           onToggleSidebar={() => {
-            if (window.innerWidth <= 1024) {
+            if (window.innerWidth <= 768) {
               toggleMobileDrawer();
             } else {
               toggleSidebarCollapse();

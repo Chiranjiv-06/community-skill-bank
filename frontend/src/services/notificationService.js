@@ -1,20 +1,21 @@
 /**
- * Notification Service (Stage 10)
+ * Notification Service (Stage 10 & Stage 17 FastAPI Integration)
  * 
- * Provides isolated frontend state management for disaster alerts,
+ * Provides notification state management for disaster alerts,
  * assignment notices, volunteer responses, and verification updates.
  * 
- * Maps to future FastAPI endpoints in Stage 17:
- * - GET    /api/v1/notifications
- * - GET    /api/v1/notifications/unread-count
- * - PATCH  /api/v1/notifications/:id/read
- * - PATCH  /api/v1/notifications/:id/unread
- * - POST   /api/v1/notifications/mark-all-read
- * - DELETE /api/v1/notifications/:id
+ * Integrated with FastAPI backend endpoints:
+ * - GET    /api/notifications
+ * - GET    /api/notifications/unread-count
+ * - GET    /api/notifications/{id}
+ * - PATCH  /api/notifications/{id}/read
+ * - PATCH  /api/notifications/read-all
+ * - POST   /api/admin/notifications/broadcast (Admin only)
  * 
- * DO NOT make real API calls or connect to backend in Stage 10.
+ * Preserves local fallback for offline resilience and tests.
  */
 
+import { api } from './api.js';
 import {
   INITIAL_DEV_NOTIFICATIONS,
   NOTIFICATION_TYPES,
@@ -38,25 +39,57 @@ const notifySubscribers = (eventData) => {
 
 const getStoredNotifications = () => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
     if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_DEV_NOTIFICATIONS));
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_DEV_NOTIFICATIONS));
+      }
       return JSON.parse(JSON.stringify(INITIAL_DEV_NOTIFICATIONS));
     }
     return JSON.parse(raw);
   } catch (err) {
     console.warn('[notificationService] Error parsing localStorage notifications, resetting:', err);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_DEV_NOTIFICATIONS));
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_DEV_NOTIFICATIONS));
+    }
     return JSON.parse(JSON.stringify(INITIAL_DEV_NOTIFICATIONS));
   }
 };
 
 const setStoredNotifications = (items) => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    }
   } catch (err) {
     console.error('[notificationService] Error persisting notifications:', err);
   }
+};
+
+export const normalizeNotification = (n) => {
+  if (!n) return null;
+  const isRead = n.is_read !== undefined ? Boolean(n.is_read) : Boolean(n.read);
+  const severity = n.severity || (n.priority === 'critical' ? 'critical' : 'info');
+  const priority = severity === 'critical' ? 'critical' : severity === 'warning' ? 'high' : (n.priority || 'normal');
+
+  return {
+    id: n.id,
+    type: n.type || 'system',
+    priority,
+    severity,
+    title: n.title || 'Notification Alert',
+    message: n.message || '',
+    timestamp: n.created_at || n.timestamp || new Date().toISOString(),
+    createdAt: n.created_at || n.timestamp || new Date().toISOString(),
+    read: isRead,
+    is_read: isRead,
+    readAt: n.read_at || n.readAt || null,
+    targetRole: n.targetRole || 'all',
+    volunteerId: n.volunteerId || (n.user_id ? String(n.user_id) : null),
+    entityType: n.related_entity_type || n.entityType || null,
+    entityId: n.related_entity_id || n.entityId || null,
+    link: n.link || (n.related_entity_type === 'emergency' && n.related_entity_id ? `/volunteer/emergencies/${n.related_entity_id}` : n.related_entity_type === 'assignment' ? '/volunteer/assignments' : null)
+  };
 };
 
 export const notificationService = {
@@ -72,13 +105,36 @@ export const notificationService = {
 
   /**
    * Retrieve notifications with role, volunteerId, and criteria filters
+   * Queries real backend when authenticated, falls back to local cache.
    */
   async getNotifications(options = {}) {
     const { role = 'all', volunteerId = null, type = 'ALL', unreadOnly = false, search = '' } = options;
 
-    let list = getStoredNotifications();
+    let serverList = null;
 
-    // Role filtering
+    // Try backend REST API first if token present
+    if (api.getToken()) {
+      try {
+        const queryParams = new URLSearchParams();
+        if (unreadOnly) queryParams.append('is_read', 'false');
+        if (type && type !== 'ALL') queryParams.append('type', type.toLowerCase());
+        queryParams.append('limit', '50');
+
+        const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+        const data = await api.get(`/api/notifications${queryString}`);
+        if (Array.isArray(data)) {
+          serverList = data.map(normalizeNotification);
+          // Update local cache with server notifications
+          setStoredNotifications(serverList);
+        }
+      } catch (err) {
+        console.warn('[notificationService] REST fetch failed, using cached store:', err.message);
+      }
+    }
+
+    let list = serverList || getStoredNotifications().map(normalizeNotification);
+
+    // Local / fallback filtering
     if (role === 'admin') {
       list = list.filter((n) => n.targetRole === 'admin' || n.targetRole === 'all');
     } else if (role !== 'all') {
@@ -86,12 +142,11 @@ export const notificationService = {
       list = list.filter((n) => {
         if (n.targetRole === 'admin') return false;
         if (n.targetRole === 'all') return true;
-        // Scoped to volunteer
         if (volunteerId) {
           const target = (volunteerId === 'alex.rivera@skillbank.org' || volunteerId === 'dev-skl-002')
             ? 'dev-skl-002'
             : volunteerId;
-          return !n.volunteerId || n.volunteerId === target;
+          return !n.volunteerId || String(n.volunteerId) === String(target);
         }
         return true;
       });
@@ -99,7 +154,8 @@ export const notificationService = {
 
     // Type filter
     if (type && type !== 'ALL') {
-      list = list.filter((n) => n.type === type);
+      const typeLower = type.toLowerCase();
+      list = list.filter((n) => n.type && n.type.toLowerCase() === typeLower);
     }
 
     // Unread only filter
@@ -124,9 +180,20 @@ export const notificationService = {
   },
 
   /**
-   * Retrieve unread notification count for a specific role/volunteer
+   * Retrieve unread notification count
    */
   async getUnreadCount(options = {}) {
+    if (api.getToken()) {
+      try {
+        const res = await api.get('/api/notifications/unread-count');
+        if (res && typeof res.unread_count === 'number') {
+          return res.unread_count;
+        }
+      } catch (err) {
+        console.warn('[notificationService] Failed to get unread count from API, using fallback:', err.message);
+      }
+    }
+
     const list = await this.getNotifications({ ...options, unreadOnly: true });
     return list.length;
   },
@@ -135,10 +202,25 @@ export const notificationService = {
    * Mark a specific notification as read
    */
   async markAsRead(id) {
+    const numericId = typeof id === 'number' ? id : (!isNaN(Number(id)) ? Number(id) : null);
+
+    if (numericId !== null && api.getToken()) {
+      try {
+        const updated = await api.patch(`/api/notifications/${numericId}/read`);
+        const norm = normalizeNotification(updated);
+        notifySubscribers({ type: 'READ_UPDATED', notificationId: id, read: true });
+        return norm;
+      } catch (err) {
+        console.warn(`[notificationService] Backend markAsRead failed for ${id}:`, err.message);
+      }
+    }
+
+    // Local / fallback update
     const list = getStoredNotifications();
-    const index = list.findIndex((n) => n.id === id);
+    const index = list.findIndex((n) => String(n.id) === String(id));
     if (index !== -1) {
       list[index].read = true;
+      list[index].is_read = true;
       list[index].readAt = new Date().toISOString();
       setStoredNotifications(list);
       notifySubscribers({ type: 'READ_UPDATED', notificationId: id, read: true });
@@ -148,13 +230,14 @@ export const notificationService = {
   },
 
   /**
-   * Mark a specific notification as unread
+   * Mark a specific notification as unread (local / offline toggle)
    */
   async markAsUnread(id) {
     const list = getStoredNotifications();
-    const index = list.findIndex((n) => n.id === id);
+    const index = list.findIndex((n) => String(n.id) === String(id));
     if (index !== -1) {
       list[index].read = false;
+      list[index].is_read = false;
       delete list[index].readAt;
       setStoredNotifications(list);
       notifySubscribers({ type: 'READ_UPDATED', notificationId: id, read: false });
@@ -167,6 +250,14 @@ export const notificationService = {
    * Mark all relevant notifications as read for current role/volunteer
    */
   async markAllAsRead(options = {}) {
+    if (api.getToken()) {
+      try {
+        await api.patch('/api/notifications/read-all');
+      } catch (err) {
+        console.warn('[notificationService] Backend markAllAsRead failed:', err.message);
+      }
+    }
+
     const list = getStoredNotifications();
     const now = new Date().toISOString();
     const { role = 'all', volunteerId = null } = options;
@@ -179,13 +270,14 @@ export const notificationService = {
         const target = (volunteerId === 'alex.rivera@skillbank.org' || volunteerId === 'dev-skl-002')
           ? 'dev-skl-002'
           : volunteerId;
-        isTarget = n.targetRole === 'all' || (n.targetRole === 'volunteer' && (!n.volunteerId || n.volunteerId === target));
+        isTarget = n.targetRole === 'all' || (n.targetRole === 'volunteer' && (!n.volunteerId || String(n.volunteerId) === String(target)));
       } else {
         isTarget = true;
       }
 
       if (isTarget && !n.read) {
         n.read = true;
+        n.is_read = true;
         n.readAt = now;
       }
     });
@@ -193,6 +285,38 @@ export const notificationService = {
     setStoredNotifications(list);
     notifySubscribers({ type: 'ALL_READ', role, volunteerId });
     return { success: true };
+  },
+
+  /**
+   * Broadcast an administrative notification to users (Admin only)
+   */
+  async broadcastNotification(data) {
+    if (!data.title || !data.title.trim()) throw new Error('Broadcast title is required.');
+    if (!data.message || !data.message.trim()) throw new Error('Broadcast message is required.');
+
+    const payload = {
+      title: data.title.trim(),
+      message: data.message.trim(),
+      type: data.type || 'system',
+      severity: data.severity || 'info',
+      role_filter: data.role_filter || data.targetRole || 'all'
+    };
+
+    if (api.getToken()) {
+      try {
+        const result = await api.post('/api/admin/notifications/broadcast', payload);
+        notifySubscribers({ type: 'BROADCAST_SENT', payload: result });
+        return result;
+      } catch (err) {
+        console.warn('[notificationService] Backend broadcast failed, falling back:', err.message);
+      }
+    }
+
+    // Local fallback broadcast
+    return this.addNotification({
+      ...payload,
+      targetRole: payload.role_filter
+    });
   },
 
   /**
@@ -206,13 +330,16 @@ export const notificationService = {
     const now = new Date().toISOString();
 
     const newNotification = {
-      id: `ntf-${Date.now().toString().slice(-6)}`,
+      id: data.id || `ntf-${Date.now().toString().slice(-6)}`,
       type: data.type || 'system',
       priority: data.priority || 'normal',
+      severity: data.severity || 'info',
       title: data.title.trim(),
       message: data.message.trim(),
       timestamp: data.timestamp || now,
+      createdAt: data.timestamp || now,
       read: false,
+      is_read: false,
       targetRole: data.targetRole || 'all',
       volunteerId: data.volunteerId || null,
       entityType: data.entityType || null,
@@ -223,7 +350,7 @@ export const notificationService = {
     list.unshift(newNotification);
     setStoredNotifications(list);
 
-    // Notify all active React UI subscribers immediately without requiring a page refresh
+    // Notify all active React UI subscribers immediately
     notifySubscribers({ type: 'NOTIFICATION_ADDED', notification: newNotification });
 
     return JSON.parse(JSON.stringify(newNotification));
@@ -234,7 +361,7 @@ export const notificationService = {
    */
   async deleteNotification(id) {
     const list = getStoredNotifications();
-    const filtered = list.filter((n) => n.id !== id);
+    const filtered = list.filter((n) => String(n.id) !== String(id));
     if (filtered.length === list.length) return false;
 
     setStoredNotifications(filtered);
@@ -246,7 +373,9 @@ export const notificationService = {
    * Reset store to initial fixtures
    */
   resetDevelopmentNotifications() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_DEV_NOTIFICATIONS));
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_DEV_NOTIFICATIONS));
+    }
     notifySubscribers({ type: 'RESET' });
     return JSON.parse(JSON.stringify(INITIAL_DEV_NOTIFICATIONS));
   }

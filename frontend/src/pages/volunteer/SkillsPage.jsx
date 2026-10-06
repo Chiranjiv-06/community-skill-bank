@@ -277,7 +277,7 @@ export const SkillsPage = () => {
       >
         <Info size={18} color="var(--color-primary)" style={{ flexShrink: 0 }} />
         <div>
-          <strong style={{ color: 'var(--text-primary)' }}>Frontend Development State:</strong> All skill additions, modifications, and deletions are saved in your local responder profile for testing. Backend FastAPI & PostgreSQL integration will occur in Stage 17.
+          <strong style={{ color: 'var(--text-primary)' }}>Responder Skill Profile:</strong> Keep your operational capabilities, certifications, and experience updated to ensure rapid matching when disaster quotas are declared.
         </div>
       </div>
 
@@ -639,7 +639,7 @@ export const SkillsPage = () => {
               value: cat,
               label: cat
             }))}
-            helperText="Isolated frontend development taxonomy (Stage 17 will fetch from backend)."
+            helperText="Select official disaster response capability category."
           />
 
           {/* Experience */}

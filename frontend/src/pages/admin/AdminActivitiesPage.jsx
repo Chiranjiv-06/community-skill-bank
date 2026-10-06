@@ -86,6 +86,17 @@ export const AdminActivitiesPage = () => {
     }
   };
 
+  const handleAttendanceChange = async (activityId, participantId, status, hours) => {
+    try {
+      await communityService.updateParticipantAttendance(activityId, participantId, { status, hours });
+      const refreshed = await communityService.getActivityById(activityId);
+      setSelectedActivity(refreshed);
+      await loadData();
+    } catch (err) {
+      alert(err.message || 'Failed to update attendance.');
+    }
+  };
+
   const handleDelete = async (activity) => {
     if (window.confirm(`Are you sure you want to permanently delete "${activity.title}"?`)) {
       try {
@@ -296,7 +307,7 @@ export const AdminActivitiesPage = () => {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))',
             gap: 'var(--spacing-md)'
           }}
         >
@@ -330,6 +341,7 @@ export const AdminActivitiesPage = () => {
         activity={selectedActivity}
         isAdmin={true}
         onStatusChange={handleStatusChange}
+        onAttendanceChange={handleAttendanceChange}
       />
     </div>
   );

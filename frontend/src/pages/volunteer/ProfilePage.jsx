@@ -1,19 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
   User,
-  Shield,
-  Phone,
-  Mail,
   MapPin,
   Clock,
-  Car,
   Heart,
   Edit3,
   Save,
   X,
   CheckCircle,
   AlertCircle,
-  Lock
+  Lock,
+  LocateFixed,
+  Compass
 } from 'lucide-react';
 import PageHeader from '../../components/common/PageHeader';
 import Card from '../../components/common/Card';
@@ -25,6 +23,7 @@ import Textarea from '../../components/common/Textarea';
 import LoadingState from '../../components/states/LoadingState';
 import { useAuth } from '../../context/AuthContext';
 import userService from '../../services/userService';
+import locationService from '../../services/locationService';
 import { ROLE_LABELS, ROLE_BADGE_VARIANTS } from '../../utils/roles';
 import { AVAILABILITY_OPTIONS, TRANSPORTATION_OPTIONS } from '../../data/skillCategories';
 
@@ -37,6 +36,9 @@ export const ProfilePage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState(null);
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [locationStatus, setLocationStatus] = useState(null);
+  const [showManualCoords, setShowManualCoords] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -130,6 +132,8 @@ export const ProfilePage = () => {
       setProfile(updated);
       setFormData(updated);
       setIsEditing(false);
+      setLocationStatus(null);
+      setShowManualCoords(false);
       setSuccessMessage('Profile information successfully saved to local development state.');
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err) {
@@ -139,10 +143,94 @@ export const ProfilePage = () => {
     }
   };
 
+  const handleDetectLocation = () => {
+    if (isDetectingLocation) return;
+
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setLocationStatus({
+        type: 'error',
+        message: 'Geolocation is not supported by your browser.'
+      });
+      return;
+    }
+
+    setIsDetectingLocation(true);
+    setLocationStatus({
+      type: 'info',
+      message: 'Requesting browser location permission...'
+    });
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const rawLat = position.coords.latitude;
+        const rawLng = position.coords.longitude;
+        const lat = Number(rawLat.toFixed(4));
+        const lng = Number(rawLng.toFixed(4));
+
+        setFormData((prev) => ({
+          ...prev,
+          latitude: lat,
+          longitude: lng
+        }));
+
+        // Automatic location population from coordinates
+        locationService.reverseGeocode(lat, lng).then((resolvedLoc) => {
+          if (resolvedLoc) {
+            setFormData((prev) => ({
+              ...prev,
+              location: resolvedLoc
+            }));
+          }
+        }).catch(() => {});
+
+        setErrors((prev) => ({
+          ...prev,
+          latitude: null,
+          longitude: null
+        }));
+
+        setIsDetectingLocation(false);
+        setLocationStatus({
+          type: 'success',
+          message: `Location successfully detected: ${lat}, ${lng}`
+        });
+      },
+      (error) => {
+        setIsDetectingLocation(false);
+        let errorMsg = 'Unable to determine your location.';
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMsg = 'Location permission was denied. Please allow location access in your browser or enter coordinates manually.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMsg = 'Location information is currently unavailable. Check device GPS or network.';
+            break;
+          case error.TIMEOUT:
+            errorMsg = 'The request to obtain your location timed out. Please try again.';
+            break;
+          default:
+            errorMsg = error.message || 'An unknown error occurred while detecting location.';
+            break;
+        }
+        setLocationStatus({
+          type: 'error',
+          message: errorMsg
+        });
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 30000
+      }
+    );
+  };
+
   const handleCancel = () => {
     setFormData(profile);
     setErrors({});
     setIsEditing(false);
+    setLocationStatus(null);
+    setShowManualCoords(false);
   };
 
   if (isLoading || !profile) {
@@ -393,47 +481,186 @@ export const ProfilePage = () => {
               )}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', marginTop: 'var(--space-4)' }}>
-              {isEditing ? (
-                <Input
-                  label="Latitude (Coordinates)"
-                  id="profile-latitude"
-                  type="number"
-                  step="0.0001"
-                  value={formData.latitude}
-                  error={errors.latitude}
-                  helperText="Decimal coordinates (-90 to 90)"
-                  onChange={(e) => handleFieldChange('latitude', e.target.value)}
-                />
-              ) : (
+            {/* SECTION B.1: Geolocation Coordinates & Automatic Capture */}
+            {isEditing ? (
+              <div
+                style={{
+                  marginTop: 'var(--space-4)',
+                  padding: 'var(--space-4)',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-surface-elevated)',
+                  border: '1px solid var(--border-subtle)'
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 'var(--space-3)',
+                    marginBottom: 'var(--space-3)'
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Compass size={16} color="var(--color-primary)" />
+                      <span style={{ fontSize: 'var(--font-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        Deployment Coordinates (GPS)
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 'var(--font-xs)', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                      Capture coordinates automatically via your browser to enable emergency dispatch. Browser location permission is required.
+                    </p>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    icon={<LocateFixed size={15} />}
+                    isLoading={isDetectingLocation}
+                    disabled={isDetectingLocation}
+                    onClick={handleDetectLocation}
+                  >
+                    {isDetectingLocation ? 'Detecting Location...' : 'Use My Current Location'}
+                  </Button>
+                </div>
+
+                {locationStatus && (
+                  <div
+                    style={{
+                      padding: 'var(--space-2) var(--space-3)',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: 'var(--font-xs)',
+                      marginBottom: 'var(--space-3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background:
+                        locationStatus.type === 'success'
+                          ? 'var(--badge-success-bg)'
+                          : locationStatus.type === 'error'
+                          ? 'var(--badge-critical-bg)'
+                          : 'var(--badge-info-bg)',
+                      color:
+                        locationStatus.type === 'success'
+                          ? 'var(--badge-success-text)'
+                          : locationStatus.type === 'error'
+                          ? 'var(--badge-critical-text)'
+                          : 'var(--badge-info-text)',
+                      border: `1px solid ${
+                        locationStatus.type === 'success'
+                          ? 'var(--badge-success-border)'
+                          : locationStatus.type === 'error'
+                          ? 'var(--badge-critical-border)'
+                          : 'var(--badge-info-border)'
+                      }`
+                    }}
+                  >
+                    {locationStatus.type === 'success' ? (
+                      <CheckCircle size={14} />
+                    ) : (
+                      <AlertCircle size={14} />
+                    )}
+                    <span>{locationStatus.message}</span>
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-3)' }}>
+                  <div
+                    style={{
+                      padding: 'var(--space-3)',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'var(--bg-surface)',
+                      border: '1px solid var(--border-subtle)'
+                    }}
+                  >
+                    <span style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>
+                      Latitude
+                    </span>
+                    <div style={{ fontSize: 'var(--font-sm)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                      {formData.latitude !== undefined && formData.latitude !== null && formData.latitude !== '' ? formData.latitude : 'Not detected'}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      padding: 'var(--space-3)',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'var(--bg-surface)',
+                      border: '1px solid var(--border-subtle)'
+                    }}
+                  >
+                    <span style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>
+                      Longitude
+                    </span>
+                    <div style={{ fontSize: 'var(--font-sm)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                      {formData.longitude !== undefined && formData.longitude !== null && formData.longitude !== '' ? formData.longitude : 'Not detected'}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 'var(--space-3)' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowManualCoords(!showManualCoords)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--color-primary)',
+                      fontSize: 'var(--font-xs)',
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      padding: 0
+                    }}
+                  >
+                    {showManualCoords ? 'Hide manual coordinate entry' : 'Edit coordinates manually'}
+                  </button>
+
+                  {showManualCoords && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', marginTop: 'var(--space-3)' }}>
+                      <Input
+                        label="Manual Latitude"
+                        id="profile-latitude"
+                        type="number"
+                        step="0.0001"
+                        value={formData.latitude ?? ''}
+                        error={errors.latitude}
+                        helperText="Decimal coordinates (-90 to 90)"
+                        onChange={(e) => handleFieldChange('latitude', e.target.value)}
+                      />
+                      <Input
+                        label="Manual Longitude"
+                        id="profile-longitude"
+                        type="number"
+                        step="0.0001"
+                        value={formData.longitude ?? ''}
+                        error={errors.longitude}
+                        helperText="Decimal coordinates (-180 to 180)"
+                        onChange={(e) => handleFieldChange('longitude', e.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', marginTop: 'var(--space-4)' }}>
                 <div>
                   <span style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)', display: 'block' }}>Latitude</span>
                   <div style={{ fontSize: 'var(--font-sm)', fontFamily: 'var(--font-mono)' }}>
-                    {profile.latitude || 'Not set'}
+                    {profile.latitude !== null && profile.latitude !== undefined && profile.latitude !== '' ? profile.latitude : 'Not set'}
                   </div>
                 </div>
-              )}
 
-              {isEditing ? (
-                <Input
-                  label="Longitude (Coordinates)"
-                  id="profile-longitude"
-                  type="number"
-                  step="0.0001"
-                  value={formData.longitude}
-                  error={errors.longitude}
-                  helperText="Decimal coordinates (-180 to 180)"
-                  onChange={(e) => handleFieldChange('longitude', e.target.value)}
-                />
-              ) : (
                 <div>
                   <span style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)', display: 'block' }}>Longitude</span>
                   <div style={{ fontSize: 'var(--font-sm)', fontFamily: 'var(--font-mono)' }}>
-                    {profile.longitude || 'Not set'}
+                    {profile.longitude !== null && profile.longitude !== undefined && profile.longitude !== '' ? profile.longitude : 'Not set'}
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </Card>
 
           {/* SECTION C: Operational Availability & Response Preferences */}

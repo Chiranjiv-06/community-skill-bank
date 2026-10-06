@@ -1,10 +1,18 @@
 import React from 'react';
-import { BookOpen, Clock, Calendar, ShieldCheck, Tag, X, FileText, CheckCircle2 } from 'lucide-react';
+import { BookOpen, Clock, Calendar, ShieldCheck, Tag, X, FileText, CheckCircle2, Archive, Globe } from 'lucide-react';
 import Modal from '../common/Modal';
 import Badge from '../common/Badge';
 import Button from '../common/Button';
 
-export const KnowledgeDetailModal = ({ document, isOpen, onClose }) => {
+export const KnowledgeDetailModal = ({
+  document,
+  isOpen,
+  onClose,
+  isAdmin = false,
+  onPublish = null,
+  onArchive = null
+}) => {
+  const [isActionLoading, setIsActionLoading] = React.useState(false);
   if (!document) return null;
 
   const {
@@ -36,9 +44,39 @@ export const KnowledgeDetailModal = ({ document, isOpen, onClose }) => {
           <div style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)' }}>
             Source: <strong style={{ color: 'var(--text-secondary)' }}>{source || 'FEMA Field Reference'}</strong>
           </div>
-          <Button variant="secondary" size="sm" onClick={onClose}>
-            Close Protocol
-          </Button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {isAdmin && document.status !== 'published' && onPublish && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={async () => {
+                  setIsActionLoading(true);
+                  try { await onPublish(document); } finally { setIsActionLoading(false); }
+                }}
+                disabled={isActionLoading}
+              >
+                <Globe size={14} style={{ marginRight: '4px' }} />
+                Publish
+              </Button>
+            )}
+            {isAdmin && document.status === 'published' && onArchive && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  setIsActionLoading(true);
+                  try { await onArchive(document); } finally { setIsActionLoading(false); }
+                }}
+                disabled={isActionLoading}
+              >
+                <Archive size={14} style={{ marginRight: '4px' }} />
+                Archive
+              </Button>
+            )}
+            <Button variant="secondary" size="sm" onClick={onClose}>
+              Close Protocol
+            </Button>
+          </div>
         </div>
       }
     >

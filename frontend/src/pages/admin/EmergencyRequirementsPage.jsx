@@ -63,7 +63,19 @@ export const EmergencyRequirementsPage = () => {
     setIsLoading(true);
     try {
       const data = await emergencyService.getEmergencies();
-      setEmergencies(data);
+      // Ensure all emergencies have their requirements loaded
+      const enriched = await Promise.all(
+        data.map(async (emg) => {
+          if (emg.requirements && emg.requirements.length > 0) return emg;
+          try {
+            const reqs = await emergencyService.getEmergencyRequirements(emg.id);
+            return { ...emg, requirements: reqs };
+          } catch {
+            return emg;
+          }
+        })
+      );
+      setEmergencies(enriched);
     } catch (err) {
       console.error('[EmergencyRequirementsPage] Error loading data:', err);
     } finally {
@@ -188,7 +200,7 @@ export const EmergencyRequirementsPage = () => {
   }
 
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+    <div className="emergency-management-container" style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', boxSizing: 'border-box', minWidth: 0 }}>
       {/* Page Header */}
       <PageHeader
         title="Emergency Requirements & Quotas"
@@ -207,7 +219,7 @@ export const EmergencyRequirementsPage = () => {
         }
       />
 
-      {/* Dev State Notice */}
+      {/* Operational Incident Workflow Banner */}
       <div
         style={{
           display: 'flex',
@@ -224,7 +236,7 @@ export const EmergencyRequirementsPage = () => {
       >
         <Info size={18} color="var(--color-primary)" style={{ flexShrink: 0 }} />
         <div>
-          <strong style={{ color: 'var(--text-primary)' }}>Emergency Requirements (Dev State):</strong> Manage personnel skill quotas per emergency declaration. Volunteer skill matching and automated recommendations will be built in Stage 6.
+          <strong style={{ color: 'var(--text-primary)' }}>Operational Disaster Workflow:</strong> Every emergency declaration establishes specialized skill quotas that directly drive algorithmic volunteer matching and tactical field assignments.
         </div>
       </div>
 

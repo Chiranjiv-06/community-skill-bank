@@ -344,7 +344,7 @@ export const SystemMetricsPage = () => {
               <div className="chart-header">
                 <div className="chart-title-group">
                   <h3>Real-Time & Sync Observability Details</h3>
-                  <p>Stage 10 Pub/Sub event bus and Stage 11 offline queue reconciliation state</p>
+                  <p>Real-time Pub/Sub event bus and offline queue reconciliation telemetry</p>
                 </div>
               </div>
               <div className="chart-content">

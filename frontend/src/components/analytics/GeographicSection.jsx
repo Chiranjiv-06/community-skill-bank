@@ -147,47 +147,54 @@ export const GeographicSection = ({
       <div className="chart-content">
         {activeView === 'grid' ? (
           <div className="geo-wards-grid">
-            {wards.map((ward) => (
-              <div key={ward.id} className="geo-ward-card">
-                <div className="geo-ward-header">
-                  <h4 className="geo-ward-title">{ward.name}</h4>
-                  <Badge variant={getStatusBadgeVariant(ward.status)}>
-                    {ward.status.toUpperCase()}
-                  </Badge>
-                </div>
+            {wards.map((ward, idx) => {
+              const statusText = (ward.status || 'Active').toUpperCase();
+              const activeCount = ward.activeEmergencies ?? ward.activeIncidents ?? 0;
+              const volunteersCount = ward.assignedVolunteers ?? ward.volunteerDensity ?? 0;
+              const coverageVal = ward.coveragePercent ?? ward.coverageRate ?? 85;
 
-                <div className="geo-ward-stats">
-                  <div className="geo-stat-col">
-                    <span className="geo-stat-label">Active Incidents</span>
-                    <span className="geo-stat-val" style={{ color: ward.activeEmergencies > 0 ? 'var(--color-critical)' : 'var(--text-muted)' }}>
-                      {ward.activeEmergencies}
-                    </span>
+              return (
+                <div key={ward.id || `ward-${idx}`} className="geo-ward-card">
+                  <div className="geo-ward-header">
+                    <h4 className="geo-ward-title">{ward.name || `Sector ${idx + 1}`}</h4>
+                    <Badge variant={getStatusBadgeVariant(ward.status)}>
+                      {statusText}
+                    </Badge>
                   </div>
-                  <div className="geo-stat-col">
-                    <span className="geo-stat-label">Assigned Responders</span>
-                    <span className="geo-stat-val" style={{ color: 'var(--color-orange-500)' }}>
-                      {ward.assignedVolunteers}
-                    </span>
-                  </div>
-                </div>
 
-                <div className="geo-coverage-bar">
-                  <div className="geo-coverage-label">
-                    <span>Operational Coverage</span>
-                    <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{ward.coveragePercent}%</span>
+                  <div className="geo-ward-stats">
+                    <div className="geo-stat-col">
+                      <span className="geo-stat-label">Active Incidents</span>
+                      <span className="geo-stat-val" style={{ color: activeCount > 0 ? 'var(--color-critical)' : 'var(--text-muted)' }}>
+                        {activeCount}
+                      </span>
+                    </div>
+                    <div className="geo-stat-col">
+                      <span className="geo-stat-label">Assigned Responders</span>
+                      <span className="geo-stat-val" style={{ color: 'var(--color-orange-500)' }}>
+                        {volunteersCount}
+                      </span>
+                    </div>
                   </div>
-                  <div className="bar-track">
-                    <div
-                      className="bar-fill"
-                      style={{
-                        width: `${ward.coveragePercent}%`,
-                        backgroundColor: ward.coveragePercent > 90 ? 'var(--color-success)' : ward.coveragePercent > 80 ? 'var(--color-warning)' : 'var(--color-critical)'
-                      }}
-                    />
+
+                  <div className="geo-coverage-bar">
+                    <div className="geo-coverage-label">
+                      <span>Operational Coverage</span>
+                      <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{coverageVal}%</span>
+                    </div>
+                    <div className="bar-track">
+                      <div
+                        className="bar-fill"
+                        style={{
+                          width: `${coverageVal}%`,
+                          backgroundColor: coverageVal > 90 ? 'var(--color-success)' : coverageVal > 80 ? 'var(--color-warning)' : 'var(--color-critical)'
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div

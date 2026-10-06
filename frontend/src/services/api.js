@@ -56,6 +56,10 @@ class ApiClient {
         }
       }
 
+      if (response.status === 204) {
+        return null;
+      }
+
       const contentType = response.headers.get('content-type');
       let data = null;
       if (contentType && contentType.includes('application/json')) {

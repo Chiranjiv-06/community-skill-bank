@@ -2,15 +2,14 @@ import React from 'react';
 import PageHeader from './PageHeader';
 import Card from './Card';
 import Badge from './Badge';
-import { Layers, ShieldCheck, Clock } from 'lucide-react';
+import { Layers, ShieldCheck, Activity } from 'lucide-react';
 
 /**
- * Clean, standard foundation placeholder for future phases
+ * Clean standard incident command module view
  */
 export const ModulePlaceholder = ({
   title,
   description,
-  phaseNumber = 'Phase 4+',
   category = 'Emergency Module',
   icon = <Layers size={22} />,
   actions = null,
@@ -31,18 +30,17 @@ export const ModulePlaceholder = ({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
               <ShieldCheck size={20} color="var(--color-primary)" />
-              <h3 style={{ fontSize: 'var(--font-lg)' }}>Frontend Foundation Established</h3>
+              <h3 style={{ fontSize: 'var(--font-lg)', margin: 0 }}>Incident Command Operational Module</h3>
             </div>
-            <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-sm)', maxWidth: '640px' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-sm)', maxWidth: '640px', margin: 0 }}>
               {description}
             </p>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)' }}>Scheduled Delivery:</span>
-            <Badge variant="neutral">
-              <Clock size={12} />
-              <span>{phaseNumber}</span>
+            <Badge variant="success">
+              <Activity size={12} />
+              <span>Operational</span>
             </Badge>
           </div>
         </div>
@@ -63,8 +61,8 @@ export const ModulePlaceholder = ({
             gap: 'var(--space-2)'
           }}
         >
-          <span>Status: <strong>Frontend module foundation ready for future implementation.</strong></span>
-          <span>Service Layer: <strong>Bound in src/services/</strong></span>
+          <span>Status: <strong>Active Incident Response Coordination</strong></span>
+          <span>Security Clearance: <strong>Authorized Incident Personnel</strong></span>
         </div>
       </Card>
 

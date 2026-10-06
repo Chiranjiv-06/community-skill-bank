@@ -64,6 +64,16 @@
   --space-12: 3rem;    /* 48px */
   --space-16: 4rem;    /* 64px */
 
+  /* Compatibility aliases used by existing feature components. */
+  --spacing-sm: var(--space-2);
+  --spacing-md: var(--space-4);
+  --color-surface: var(--bg-surface);
+  --color-surface-hover: var(--bg-surface-elevated);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-border-subtle: var(--border-subtle);
+
   /* Radius */
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -72,7 +82,7 @@
   --radius-full: 9999px;
 
   /* Layout dimensions */
-  --sidebar-width: 270px;
+  --sidebar-width: 260px;
   --sidebar-collapsed-width: 76px;
   --topbar-height: 68px;
 
@@ -96,7 +106,7 @@
   color-scheme: dark;
 
   /* Surfaces & Backgrounds */
-  --bg-app: #080B10;
+  --bg-app: #070A0F;
   --bg-surface: #0E131F;
   --bg-surface-elevated: #151D2E;
   --bg-surface-active: #1D283E;

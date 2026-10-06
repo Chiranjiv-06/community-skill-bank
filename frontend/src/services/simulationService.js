@@ -6,19 +6,19 @@
  * response pressure scoring, and time-series progression.
  * 
  * STRICT ISOLATION RULE:
- * This service operates ONLY on simulated data (localStorage: csb_dev_simulations).
- * It NEVER mutates or invokes real emergencies, assignments, notifications, or volunteers.
+ * Simulation actions operate purely within the isolated simulation domain.
+ * They NEVER create or mutate real operational emergencies, assignments, or notifications.
  * 
- * Future Backend Architecture:
- * POST   /api/simulations
- * GET    /api/simulations
- * GET    /api/simulations/{id}
- * PATCH  /api/simulations/{id}
- * POST   /api/simulations/{id}/requirements
- * DELETE /api/simulations/{id}/requirements/{req_id}
- * POST   /api/simulations/{id}/run
- * GET    /api/simulations/{id}/results
- * GET    /api/simulations/{id}/timeline
+ * Backend API Integration:
+ * - GET    /api/simulations
+ * - POST   /api/simulations
+ * - GET    /api/simulations/{id}
+ * - PATCH  /api/simulations/{id}
+ * - POST   /api/simulations/{id}/requirements
+ * - DELETE /api/simulations/{id}/requirements/{req_id}
+ * - POST   /api/simulations/{id}/run
+ * - GET    /api/simulations/{id}/results
+ * - GET    /api/simulations/{id}/timeline
  */
 
 import {
@@ -26,6 +26,7 @@ import {
   SIMULATION_STATUSES,
   SIMULATION_DISASTER_TYPES
 } from '../data/devSimulations.js';
+import api from './api.js';
 
 const STORAGE_KEY = 'csb_dev_simulations';
 
@@ -59,6 +60,108 @@ const saveStoredSimulations = (simulations) => {
   } catch (err) {
     console.error('[simulationService] Error saving simulations to storage:', err);
   }
+};
+
+/**
+ * Normalize backend results to frontend simulation results shape
+ */
+const normalizeBackendResults = (res) => {
+  if (!res) return null;
+  const rawPressure = res.response_pressure || 'moderate';
+  let tier = 'Moderate';
+  let score = 50;
+
+  if (typeof rawPressure === 'string') {
+    const p = rawPressure.toLowerCase();
+    if (p === 'critical') { tier = 'Critical'; score = 90; }
+    else if (p === 'severe' || p === 'high') { tier = 'Severe'; score = 75; }
+    else if (p === 'moderate' || p === 'medium') { tier = 'Moderate'; score = 50; }
+    else { tier = 'Low'; score = 25; }
+  }
+
+  const skillGaps = (res.skills || []).map((s) => ({
+    skill: s.skill_title || s.skill_category,
+    category: s.skill_category,
+    minProficiency: s.min_proficiency ? s.min_proficiency.charAt(0).toUpperCase() + s.min_proficiency.slice(1) : 'Intermediate',
+    required: s.simulated_demand || s.required_volunteers || 0,
+    available: s.available_volunteers || 0,
+    gap: s.gap || 0,
+    urgency: s.urgency ? s.urgency.charAt(0).toUpperCase() + s.urgency.slice(1) : 'High'
+  }));
+
+  const timeline = (res.timeline || []).map((t) => ({
+    step: `T+${t.elapsed_hours}h`,
+    label: `T+${t.elapsed_hours}h`,
+    demand: t.active_demand,
+    capacity: t.mobilized_capacity,
+    fulfilled: t.fulfilled,
+    pressure: t.response_pressure === 'critical' ? 90 : (t.response_pressure === 'high' ? 70 : 40)
+  }));
+
+  return {
+    totalDemand: res.total_demand || 0,
+    availableCapacity: res.total_available_capacity || 0,
+    fulfilledDemand: res.total_fulfilled || 0,
+    unfulfilledDemand: res.total_unfulfilled || 0,
+    fulfillmentRate: typeof res.fulfillment_percentage === 'number' ? res.fulfillment_percentage : 0,
+    responsePressureScore: score,
+    responsePressureTier: tier,
+    executedAt: res.executed_at || new Date().toISOString(),
+    skillGaps,
+    timeline
+  };
+};
+
+/**
+ * Normalize backend scenario to frontend scenario model
+ */
+const normalizeBackendScenario = (s) => {
+  if (!s) return null;
+  const statusMap = {
+    draft: SIMULATION_STATUSES.DRAFT,
+    configured: SIMULATION_STATUSES.CONFIGURED,
+    running: SIMULATION_STATUSES.RUNNING,
+    completed: SIMULATION_STATUSES.COMPLETED,
+    failed: SIMULATION_STATUSES.FAILED
+  };
+
+  const status = statusMap[(s.status || '').toLowerCase()] || SIMULATION_STATUSES.DRAFT;
+  const disasterType = s.disaster_type ? s.disaster_type.charAt(0).toUpperCase() + s.disaster_type.slice(1) : 'Disaster';
+
+  const requirements = (s.requirements || []).map((r) => ({
+    id: r.id,
+    skill: r.skill_title || r.skill_category,
+    category: r.skill_category || 'General',
+    minProficiency: r.min_proficiency ? r.min_proficiency.charAt(0).toUpperCase() + r.min_proficiency.slice(1) : 'Intermediate',
+    minVolunteers: r.required_volunteers || 1,
+    urgency: r.urgency ? r.urgency.charAt(0).toUpperCase() + r.urgency.slice(1) : 'Medium'
+  }));
+
+  let results = null;
+  let timeline = [];
+  if (s.results) {
+    results = normalizeBackendResults(s.results);
+    timeline = results?.timeline || [];
+  }
+
+  return {
+    id: s.id,
+    name: s.name,
+    disasterType: disasterType,
+    affectedArea: s.description || `Sector (${s.center_latitude}, ${s.center_longitude})`,
+    coordinates: [s.center_latitude || 18.5204, s.center_longitude || 73.8567],
+    radius: s.affected_radius_km || 20,
+    duration: s.duration_hours || 24,
+    demandMultiplier: s.demand_multiplier || 1.0,
+    status: status,
+    createdAt: s.created_at || new Date().toISOString(),
+    lastRun: s.updated_at || null,
+    notes: s.description || '',
+    requirements: requirements,
+    results: results,
+    timeline: timeline,
+    isLive: true
+  };
 };
 
 /**
@@ -194,6 +297,18 @@ export const simulationService = {
    * Retrieve all disaster simulation scenarios
    */
   async getSimulations() {
+    if (typeof api !== 'undefined' && api?.getToken?.()) {
+      try {
+        const liveList = await api.get('/api/simulations');
+        if (Array.isArray(liveList) && liveList.length > 0) {
+          const normalized = liveList.map(normalizeBackendScenario);
+          return normalized;
+        }
+      } catch (err) {
+        console.warn('[simulationService] Live /api/simulations failed, using fallback:', err?.message || err);
+      }
+    }
+
     const list = getStoredSimulations();
     return JSON.parse(JSON.stringify(list));
   },
@@ -202,8 +317,27 @@ export const simulationService = {
    * Retrieve specific disaster simulation scenario by ID
    */
   async getSimulation(id) {
+    if (typeof api !== 'undefined' && api?.getToken?.() && !isNaN(Number(id))) {
+      try {
+        const s = await api.get(`/api/simulations/${id}`);
+        if (s) {
+          if (s.has_result) {
+            try {
+              const res = await api.get(`/api/simulations/${id}/results`);
+              s.results = res;
+            } catch {
+              // ignore results error
+            }
+          }
+          return normalizeBackendScenario(s);
+        }
+      } catch (err) {
+        console.warn(`[simulationService] Live getSimulation(${id}) failed, falling back:`, err?.message || err);
+      }
+    }
+
     const list = getStoredSimulations();
-    const match = list.find((s) => s.id === id);
+    const match = list.find((s) => String(s.id) === String(id));
     if (!match) {
       throw new Error(`Simulation scenario not found: ${id}`);
     }
@@ -233,10 +367,37 @@ export const simulationService = {
       throw new Error('Demand multiplier must be a valid positive number.');
     }
 
+    if (typeof api !== 'undefined' && api?.getToken?.()) {
+      try {
+        const payload = {
+          name: data.name.trim(),
+          description: data.affectedArea.trim(),
+          disaster_type: data.disasterType.toLowerCase(),
+          severity: (data.severity || 'medium').toLowerCase(),
+          center_latitude: Number(data.coordinates?.[0] || 18.5204),
+          center_longitude: Number(data.coordinates?.[1] || 73.8567),
+          affected_radius_km: Number(data.radius || 20),
+          affected_population: Number(data.affectedPopulation || 5000),
+          duration_hours: Number(data.duration || 24),
+          demand_multiplier: Number(data.demandMultiplier || 1.0)
+        };
+        const created = await api.post('/api/simulations', payload);
+        if (created) {
+          const norm = normalizeBackendScenario(created);
+          // Also record in local store
+          const list = getStoredSimulations();
+          list.unshift(norm);
+          saveStoredSimulations(list);
+          return norm;
+        }
+      } catch (err) {
+        console.warn('[simulationService] Live createSimulation failed, fallback to local store:', err?.message || err);
+      }
+    }
+
     const list = getStoredSimulations();
     const id = `sim-${Date.now().toString(36)}`;
 
-    // Default coordinates based on typical municipal areas or fallback
     let coords = [34.055, -118.25];
     if (data.coordinates && Array.isArray(data.coordinates) && data.coordinates.length >= 2) {
       coords = data.coordinates;
@@ -273,8 +434,26 @@ export const simulationService = {
    * Update scenario configuration
    */
   async updateSimulation(id, updates) {
+    if (typeof api !== 'undefined' && api?.getToken?.() && !isNaN(Number(id))) {
+      try {
+        const payload = {};
+        if (updates.name) payload.name = updates.name.trim();
+        if (updates.radius) payload.affected_radius_km = Number(updates.radius);
+        if (updates.duration) payload.duration_hours = Number(updates.duration);
+        if (updates.demandMultiplier) payload.demand_multiplier = Number(updates.demandMultiplier);
+        if (updates.disasterType) payload.disaster_type = updates.disasterType.toLowerCase();
+
+        const updated = await api.patch(`/api/simulations/${id}`, payload);
+        if (updated) {
+          return normalizeBackendScenario(updated);
+        }
+      } catch (err) {
+        console.warn(`[simulationService] Live updateSimulation(${id}) failed, falling back:`, err?.message || err);
+      }
+    }
+
     const list = getStoredSimulations();
-    const index = list.findIndex((s) => s.id === id);
+    const index = list.findIndex((s) => String(s.id) === String(id));
     if (index === -1) {
       throw new Error(`Simulation scenario not found: ${id}`);
     }
@@ -301,7 +480,6 @@ export const simulationService = {
       createdAt: current.createdAt
     };
 
-    // If requirements are present and status was Draft, advance to Configured
     if (updated.requirements.length > 0 && updated.status === SIMULATION_STATUSES.DRAFT) {
       updated.status = SIMULATION_STATUSES.CONFIGURED;
     }
@@ -316,7 +494,7 @@ export const simulationService = {
    */
   async deleteSimulation(id) {
     const list = getStoredSimulations();
-    const filtered = list.filter((s) => s.id !== id);
+    const filtered = list.filter((s) => String(s.id) !== String(id));
     if (filtered.length === list.length) {
       throw new Error(`Simulation scenario not found: ${id}`);
     }
@@ -335,8 +513,33 @@ export const simulationService = {
       throw new Error('Minimum volunteers must be a positive number.');
     }
 
+    if (typeof api !== 'undefined' && api?.getToken?.() && !isNaN(Number(id))) {
+      try {
+        const payload = {
+          skill_category: requirement.category || requirement.skill || 'General',
+          skill_title: requirement.skill.trim(),
+          min_proficiency: (requirement.minProficiency || 'intermediate').toLowerCase(),
+          urgency: (requirement.urgency || 'medium').toLowerCase(),
+          required_volunteers: Number(requirement.minVolunteers)
+        };
+        const res = await api.post(`/api/simulations/${id}/requirements`, payload);
+        if (res) {
+          return {
+            id: res.id,
+            skill: res.skill_title || res.skill_category,
+            category: res.skill_category,
+            minProficiency: res.min_proficiency ? res.min_proficiency.charAt(0).toUpperCase() + res.min_proficiency.slice(1) : 'Intermediate',
+            minVolunteers: res.required_volunteers,
+            urgency: res.urgency ? res.urgency.charAt(0).toUpperCase() + res.urgency.slice(1) : 'Medium'
+          };
+        }
+      } catch (err) {
+        console.warn(`[simulationService] Live addRequirement(${id}) failed, falling back:`, err?.message || err);
+      }
+    }
+
     const list = getStoredSimulations();
-    const index = list.findIndex((s) => s.id === id);
+    const index = list.findIndex((s) => String(s.id) === String(id));
     if (index === -1) {
       throw new Error(`Simulation scenario not found: ${id}`);
     }
@@ -368,13 +571,13 @@ export const simulationService = {
    */
   async updateRequirement(id, reqId, updates) {
     const list = getStoredSimulations();
-    const simIndex = list.findIndex((s) => s.id === id);
+    const simIndex = list.findIndex((s) => String(s.id) === String(id));
     if (simIndex === -1) {
       throw new Error(`Simulation scenario not found: ${id}`);
     }
 
     const current = list[simIndex];
-    const reqIndex = (current.requirements || []).findIndex((r) => r.id === reqId);
+    const reqIndex = (current.requirements || []).findIndex((r) => String(r.id) === String(reqId));
     if (reqIndex === -1) {
       throw new Error(`Requirement not found: ${reqId}`);
     }
@@ -395,14 +598,22 @@ export const simulationService = {
    * Delete a requirement from a simulation scenario
    */
   async deleteRequirement(id, reqId) {
+    if (typeof api !== 'undefined' && api?.getToken?.() && !isNaN(Number(id)) && !isNaN(Number(reqId))) {
+      try {
+        await api.delete(`/api/simulations/${id}/requirements/${reqId}`);
+      } catch (err) {
+        console.warn(`[simulationService] Live deleteRequirement failed:`, err?.message || err);
+      }
+    }
+
     const list = getStoredSimulations();
-    const index = list.findIndex((s) => s.id === id);
+    const index = list.findIndex((s) => String(s.id) === String(id));
     if (index === -1) {
       throw new Error(`Simulation scenario not found: ${id}`);
     }
 
     const current = list[index];
-    current.requirements = (current.requirements || []).filter((r) => r.id !== reqId);
+    current.requirements = (current.requirements || []).filter((r) => String(r.id) !== String(reqId));
 
     if (current.requirements.length === 0 && current.status === SIMULATION_STATUSES.CONFIGURED) {
       current.status = SIMULATION_STATUSES.DRAFT;
@@ -418,8 +629,22 @@ export const simulationService = {
    * Calculates metrics, updates state from Running -> Completed (or Failed), produces results and timeline.
    */
   async runSimulation(id) {
+    if (typeof api !== 'undefined' && api?.getToken?.() && !isNaN(Number(id))) {
+      try {
+        await api.post(`/api/simulations/${id}/run`, {});
+        const res = await api.get(`/api/simulations/${id}/results`);
+        const scenario = await this.getSimulation(id);
+        scenario.status = SIMULATION_STATUSES.COMPLETED;
+        scenario.results = normalizeBackendResults(res);
+        scenario.timeline = scenario.results?.timeline || [];
+        return scenario;
+      } catch (err) {
+        console.warn(`[simulationService] Live runSimulation(${id}) failed, falling back:`, err?.message || err);
+      }
+    }
+
     const list = getStoredSimulations();
-    const index = list.findIndex((s) => s.id === id);
+    const index = list.findIndex((s) => String(s.id) === String(id));
     if (index === -1) {
       throw new Error(`Simulation scenario not found: ${id}`);
     }
@@ -432,12 +657,10 @@ export const simulationService = {
       throw new Error('Simulation failed: Cannot execute scenario without at least one requirement.');
     }
 
-    // Set status to Running
     current.status = SIMULATION_STATUSES.RUNNING;
     list[index] = current;
     saveStoredSimulations(list);
 
-    // Compute deterministic simulation outputs
     const { results, timeline } = calculateSimulationMetrics(current);
 
     current.status = SIMULATION_STATUSES.COMPLETED;
@@ -454,6 +677,17 @@ export const simulationService = {
    * Get simulation results by scenario ID
    */
   async getSimulationResults(id) {
+    if (typeof api !== 'undefined' && api?.getToken?.() && !isNaN(Number(id))) {
+      try {
+        const res = await api.get(`/api/simulations/${id}/results`);
+        if (res) {
+          return normalizeBackendResults(res);
+        }
+      } catch (err) {
+        console.warn(`[simulationService] Live getSimulationResults(${id}) failed:`, err?.message || err);
+      }
+    }
+
     const sim = await this.getSimulation(id);
     if (!sim.results) {
       throw new Error(`No simulation results available for scenario: ${id}`);
@@ -465,6 +699,24 @@ export const simulationService = {
    * Get simulation timeline progression by scenario ID
    */
   async getSimulationTimeline(id) {
+    if (typeof api !== 'undefined' && api?.getToken?.() && !isNaN(Number(id))) {
+      try {
+        const tl = await api.get(`/api/simulations/${id}/timeline`);
+        if (tl && Array.isArray(tl.timeline)) {
+          return tl.timeline.map((t) => ({
+            step: `T+${t.elapsed_hours}h`,
+            label: `T+${t.elapsed_hours}h`,
+            demand: t.active_demand,
+            capacity: t.mobilized_capacity,
+            fulfilled: t.fulfilled,
+            pressure: t.response_pressure === 'critical' ? 90 : 40
+          }));
+        }
+      } catch (err) {
+        console.warn(`[simulationService] Live getSimulationTimeline(${id}) failed:`, err?.message || err);
+      }
+    }
+
     const sim = await this.getSimulation(id);
     if (!sim.timeline || sim.timeline.length === 0) {
       throw new Error(`No simulation timeline available for scenario: ${id}`);

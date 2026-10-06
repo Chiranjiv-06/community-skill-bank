@@ -12,6 +12,7 @@ import LoadingState from '../../components/states/LoadingState';
 import NotificationItem from '../../components/notifications/NotificationItem';
 import { useNotifications } from '../../context/NotificationContext';
 import { NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../../data/devNotifications';
+import { notificationService } from '../../services/notificationService';
 import {
   Bell,
   CheckCheck,
@@ -81,13 +82,15 @@ export const AdminNotificationsPage = () => {
 
     setIsBroadcasting(true);
     try {
-      await simulateEvent(broadcastForm.type, {
+      const severity = broadcastForm.priority === 'critical' ? 'critical' : broadcastForm.priority === 'high' ? 'warning' : 'info';
+      await notificationService.broadcastNotification({
         title: broadcastForm.title,
         message: broadcastForm.message,
-        priority: broadcastForm.priority,
-        targetRole: broadcastForm.targetRole,
-        link: broadcastForm.type === 'emergency' ? '/admin/emergencies' : '/admin/assignments'
+        type: broadcastForm.type,
+        severity,
+        role_filter: broadcastForm.targetRole
       });
+      if (refreshNotifications) await refreshNotifications();
       setIsBroadcasting(false);
       setIsBroadcastModalOpen(false);
       setBroadcastForm({
@@ -98,8 +101,20 @@ export const AdminNotificationsPage = () => {
         targetRole: 'all'
       });
     } catch (err) {
+      console.warn('[AdminNotificationsPage] Real broadcast failed, falling back to simulated event:', err);
+      try {
+        await simulateEvent(broadcastForm.type, {
+          title: broadcastForm.title,
+          message: broadcastForm.message,
+          priority: broadcastForm.priority,
+          targetRole: broadcastForm.targetRole,
+          link: broadcastForm.type === 'emergency' ? '/admin/emergencies' : '/admin/assignments'
+        });
+      } catch (simErr) {
+        console.error('Simulation error:', simErr);
+      }
       setIsBroadcasting(false);
-      alert('Failed to dispatch broadcast.');
+      setIsBroadcastModalOpen(false);
     }
   };
 

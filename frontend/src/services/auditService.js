@@ -2,12 +2,14 @@
  * Audit Log Service (Stage 15 — Audit & Observability)
  * 
  * Provides isolated event history access, search, filtering, and detail inspection.
- * Decoupled from backend API (future: GET /api/admin/audit-logs).
+ * Backend API Integration:
+ * - GET /api/admin/audit-logs
  * 
  * NEVER returns passwords, JWT tokens, secrets, or sensitive credentials.
  */
 
 import { INITIAL_DEV_AUDIT_LOGS, AUDIT_EVENT_TYPES } from '../data/devAuditLogs.js';
+import api from './api.js';
 
 const STORAGE_KEY = 'csb_dev_audit_logs';
 
@@ -49,11 +51,58 @@ const sanitizeAuditRecord = (record) => {
   return clone;
 };
 
+/**
+ * Normalize backend audit log into frontend model
+ */
+const normalizeBackendAuditLog = (log) => {
+  if (!log) return null;
+  const entityMap = {
+    simulation_scenario: 'Simulation',
+    emergency: 'Emergency',
+    assignment: 'Assignment',
+    user: 'User',
+    certification: 'Certification',
+    training: 'Training',
+    notification: 'Notification',
+    sync: 'Sync',
+    auth: 'Auth'
+  };
+
+  const entity = entityMap[log.entity_type] || 
+    (log.entity_type ? log.entity_type.charAt(0).toUpperCase() + log.entity_type.slice(1) : 'System');
+
+  const status = (log.outcome === 'success' || log.outcome === 'Success') ? 'Success' : 'Failed';
+
+  return sanitizeAuditRecord({
+    id: String(log.id),
+    timestamp: log.timestamp || new Date().toISOString(),
+    actor: log.actor_email || log.actor_name || (log.actor_user_id ? `User #${log.actor_user_id}` : 'System'),
+    action: log.action || AUDIT_EVENT_TYPES.SYSTEM_HEARTBEAT,
+    entity: entity,
+    entityId: log.entity_id != null ? String(log.entity_id) : '-',
+    status: status,
+    requestId: log.request_id || `req-${log.id}`,
+    metadata: log.metadata_json || {}
+  });
+};
+
 export const auditService = {
   /**
    * Retrieve all audit event records
    */
   async getAuditLogs() {
+    if (typeof api !== 'undefined' && api?.getToken?.()) {
+      try {
+        const res = await api.get('/api/admin/audit-logs?limit=100');
+        if (res && Array.isArray(res.logs) && res.logs.length > 0) {
+          const normalized = res.logs.map(normalizeBackendAuditLog);
+          return normalized;
+        }
+      } catch (err) {
+        console.warn('[auditService] Live /api/admin/audit-logs failed, fallback to local storage:', err?.message || err);
+      }
+    }
+
     const logs = getStoredAuditLogs();
     return logs.map(sanitizeAuditRecord);
   },
@@ -62,8 +111,8 @@ export const auditService = {
    * Retrieve single audit log by ID
    */
   async getAuditLog(id) {
-    const logs = getStoredAuditLogs();
-    const match = logs.find((l) => l.id === id);
+    const logs = await this.getAuditLogs();
+    const match = logs.find((l) => String(l.id) === String(id));
     if (!match) {
       throw new Error(`Audit record not found: ${id}`);
     }
@@ -81,18 +130,18 @@ export const auditService = {
 
     const q = query.trim().toLowerCase();
     return logs.filter((log) => {
-      const actorMatch = (log.actor || '').toLowerCase().includes(q);
-      const actionMatch = (log.action || '').toLowerCase().includes(q);
-      const entityMatch = (log.entity || '').toLowerCase().includes(q);
-      const entityIdMatch = (log.entityId || '').toLowerCase().includes(q);
-      const requestMatch = (log.requestId || '').toLowerCase().includes(q);
-
-      return actorMatch || actionMatch || entityMatch || entityIdMatch || requestMatch;
+      return (
+        (log.actor || '').toLowerCase().includes(q) ||
+        (log.action || '').toLowerCase().includes(q) ||
+        (log.entity || '').toLowerCase().includes(q) ||
+        (log.entityId || '').toLowerCase().includes(q) ||
+        (log.requestId || '').toLowerCase().includes(q)
+      );
     });
   },
 
   /**
-   * Filter audit logs by action, status, and entity
+   * Filter audit logs by criteria
    */
   async filterAuditLogs(filters = {}) {
     let logs = await this.getAuditLogs();
@@ -109,11 +158,21 @@ export const auditService = {
       logs = logs.filter((l) => l.entity.toLowerCase() === filters.entity.toLowerCase());
     }
 
+    if (filters.startDate) {
+      const start = new Date(filters.startDate).getTime();
+      logs = logs.filter((l) => new Date(l.timestamp).getTime() >= start);
+    }
+
+    if (filters.endDate) {
+      const end = new Date(filters.endDate).getTime();
+      logs = logs.filter((l) => new Date(l.timestamp).getTime() <= end);
+    }
+
     return logs;
   },
 
   /**
-   * Query logs with search, filtering, sorting, and pagination
+   * Complex query: Search, Filter, Sort, Paginate
    */
   async queryAuditLogs({
     query = '',
@@ -155,7 +214,7 @@ export const auditService = {
       logs = logs.filter((l) => l.entity.toLowerCase() === entity.toLowerCase());
     }
 
-    // 5. Sort by Timestamp
+    // 5. Sort
     logs.sort((a, b) => {
       const timeA = new Date(a.timestamp).getTime();
       const timeB = new Date(b.timestamp).getTime();
@@ -164,13 +223,15 @@ export const auditService = {
 
     // 6. Pagination
     const totalRecords = logs.length;
-    const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+    const totalPages = Math.ceil(totalRecords / pageSize) || 1;
     const currentPage = Math.min(Math.max(1, page), totalPages);
     const startIndex = (currentPage - 1) * pageSize;
-    const paginatedItems = logs.slice(startIndex, startIndex + pageSize);
+    const paginatedRecords = logs.slice(startIndex, startIndex + pageSize);
 
     return {
-      items: paginatedItems,
+      items: paginatedRecords,
+      records: paginatedRecords,
+      logs: paginatedRecords,
       totalRecords,
       totalPages,
       currentPage,
@@ -179,7 +240,7 @@ export const auditService = {
   },
 
   /**
-   * Reset audit logs to initial seed dataset
+   * Reset audit log store to seed data
    */
   resetDevelopmentAuditLogs() {
     if (typeof localStorage !== 'undefined') {

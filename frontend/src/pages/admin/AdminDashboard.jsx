@@ -90,6 +90,7 @@ export const AdminDashboard = () => {
 
       {/* 2-COLUMN MAIN CONTENT & SECONDARY INFORMATION AREA */}
       <div
+        className="admin-dashboard-grid"
         style={{
           display: 'grid',
           gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',

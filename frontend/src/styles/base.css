@@ -11,18 +11,93 @@
 html {
   font-size: 16px;
   line-height: 1.5;
+  min-height: 100%;
+  background-color: var(--bg-app);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  overflow-x: hidden;
 }
 
 body {
+  position: relative;
+  isolation: isolate;
   font-family: var(--font-sans);
   background-color: var(--bg-app);
   color: var(--text-primary);
   min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
   transition: background-color var(--transition-normal), color var(--transition-normal);
+}
+
+/* Priority 1: Dark Technical Command-Center Grid Background */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  pointer-events: none;
+  background-color: #070A0F;
+  background-image:
+    /* Major tactical division lines (128px) */
+    linear-gradient(to right, rgba(255, 255, 255, 0.075) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.075) 1px, transparent 1px),
+    /* Minor technical grid lines (32px) */
+    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 128px 128px, 128px 128px, 32px 32px, 32px 32px;
+  background-position: center top;
+  transition: opacity var(--transition-normal), background-color var(--transition-normal);
+}
+
+/* Subtle Command-Center Vignette & Horizon Glow */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(249, 115, 22, 0.03), transparent 60%),
+    radial-gradient(circle at 100% 100%, rgba(30, 41, 59, 0.05), transparent 50%);
+  transition: opacity var(--transition-normal);
+}
+
+/* Light Theme Background & Grid Continuity */
+[data-theme="light"] html,
+[data-theme="light"] body {
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+}
+
+[data-theme="light"] body::before {
+  background-color: #F4F6F9;
+  background-image:
+    linear-gradient(to right, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+    linear-gradient(to right, rgba(15, 23, 42, 0.015) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.015) 1px, transparent 1px);
+  background-size: 128px 128px, 128px 128px, 32px 32px, 32px 32px;
+}
+
+[data-theme="light"] body::after {
+  opacity: 0;
+  display: none;
+}
+
+#root {
+  min-height: 100vh;
 }
 
 h1, h2, h3, h4, h5, h6 {

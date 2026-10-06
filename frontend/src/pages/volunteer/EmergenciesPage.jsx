@@ -85,7 +85,7 @@ export const EmergenciesPage = () => {
   }
 
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+    <div className="emergency-management-container" style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', boxSizing: 'border-box', minWidth: 0 }}>
       {/* Page Header */}
       <PageHeader
         title="Active Emergencies"
@@ -226,10 +226,14 @@ export const EmergenciesPage = () => {
         />
       ) : (
         <div
+          className="emergency-cards-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-            gap: 'var(--space-4)'
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))',
+            gap: 'var(--space-4)',
+            width: '100%',
+            boxSizing: 'border-box',
+            minWidth: 0
           }}
         >
           {filteredEmergencies.map((emergency) => (

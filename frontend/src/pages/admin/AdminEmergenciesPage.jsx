@@ -178,7 +178,7 @@ export const AdminEmergenciesPage = () => {
   }
 
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+    <div className="emergency-management-container" style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', boxSizing: 'border-box', minWidth: 0 }}>
       {/* Page Header */}
       <PageHeader
         title="Emergency Incident Command"
@@ -223,7 +223,7 @@ export const AdminEmergenciesPage = () => {
       >
         <Info size={18} color="var(--color-primary)" style={{ flexShrink: 0 }} />
         <div>
-          <strong style={{ color: 'var(--text-primary)' }}>Incident Command (Dev State):</strong> Create, edit, and transition emergency incident statuses in local state. Backend FastAPI and PostgreSQL synchronization will be wired in Stage 17.
+          <strong style={{ color: 'var(--text-primary)' }}>Incident Operations Command:</strong> Monitor real-time disaster declarations, manage personnel mobilization quotas, and track field response lifecycle across all sectors.
         </div>
       </div>
 
@@ -384,10 +384,14 @@ export const AdminEmergenciesPage = () => {
         />
       ) : (
         <div
+          className="emergency-cards-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-            gap: 'var(--space-4)'
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))',
+            gap: 'var(--space-4)',
+            width: '100%',
+            boxSizing: 'border-box',
+            minWidth: 0
           }}
         >
           {filteredEmergencies.map((emergency) => (

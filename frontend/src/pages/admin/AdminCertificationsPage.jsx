@@ -116,7 +116,7 @@ export const AdminCertificationsPage = () => {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))',
           gap: 'var(--spacing-md)'
         }}
       >

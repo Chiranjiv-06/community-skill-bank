@@ -154,7 +154,7 @@ export const RecommendationsPage = () => {
       >
         <Info size={18} color="var(--color-primary)" style={{ flexShrink: 0 }} />
         <div>
-          <strong style={{ color: 'var(--text-primary)' }}>Recommendation Intelligence (Dev State):</strong> Displays multi-factor candidate scoring and priority ranking. Real-time recommendation optimization will run in FastAPI backend in Stage 17.
+          <strong style={{ color: 'var(--text-primary)' }}>Recommendation Engine:</strong> Multi-factor candidate scoring evaluates proximity, verified proficiency, and historical reliability to rank responders for immediate tactical deployment.
         </div>
       </div>
 

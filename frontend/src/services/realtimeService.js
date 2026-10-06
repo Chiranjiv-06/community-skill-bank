@@ -1,26 +1,30 @@
 /**
- * WebSocket-Ready Real-Time Service & Event Adapter (Stage 10)
+ * Real-Time WebSocket Service & Event Adapter (Stage 10 & Stage 17 Integration)
  * 
- * Provides an event-driven adapter layer that simulates incoming real-time events
- * during frontend development, while maintaining a clean contract ready for 
- * real FastAPI WebSocket server integration in Stage 17.
+ * Manages live WebSocket connection to FastAPI backend:
+ * ws://localhost:8000/api/ws?token=<jwt>
  * 
- * Architecture:
- * UI / NotificationCenter 
- *   → notificationService
- *     → realtimeService (Real-Time Event Adapter)
- *       → Development Event Source (Simulated)
- * 
- * CRITICAL REQUIREMENTS:
- * - DO NOT connect to a real WebSocket server.
- * - DO NOT create backend WebSocket endpoints.
- * - Distinguish development simulation from production WebSocket connectivity.
+ * Features:
+ * - Native browser WebSocket with auto-reconnect
+ * - JWT authentication parameter
+ * - Keepalive ping/pong heartbeat (25s interval)
+ * - Safe JSON message ingestion & event broadcasting
+ * - Integration with notificationService for real-time inbox updates
+ * - Development event simulation preserved for testing
  */
 
+import { api } from './api.js';
 import { notificationService } from './notificationService.js';
 
 // Event subscribers map: eventType -> Set of callbacks
 const eventSubscribers = new Map();
+
+// Active WebSocket instance & keepalive timer
+let socket = null;
+let pingInterval = null;
+let reconnectTimeout = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_DELAY = 30000;
 
 // Connection state
 let connectionState = {
@@ -28,6 +32,13 @@ let connectionState = {
   label: 'Development Event Source (Simulated)',
   isDevelopment: true,
   lastHeartbeat: new Date().toISOString()
+};
+
+const getWebSocketUrl = (token) => {
+  const isBrowser = typeof window !== 'undefined';
+  const protocol = isBrowser && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const defaultHost = 'localhost:8000';
+  return `${protocol}//${defaultHost}/api/ws?token=${encodeURIComponent(token)}`;
 };
 
 export const realtimeService = {
@@ -40,18 +51,19 @@ export const realtimeService = {
 
   /**
    * Set connection state (used for testing connection/error states)
-   * @param {string} status - 'dev_connected' | 'connecting' | 'disconnected' | 'unavailable'
+   * @param {string} status - 'connected' | 'connecting' | 'disconnected' | 'unavailable' | 'dev_connected'
    */
   setConnectionState(status) {
-    let label = 'Development Event Source (Simulated)';
-    if (status === 'connecting') label = 'Initializing Simulated Event Stream...';
-    if (status === 'disconnected') label = 'Simulated Stream Disconnected';
-    if (status === 'unavailable') label = 'Production WebSocket Server Unavailable (Integration in Stage 17)';
+    let label = 'Real-Time Stream Disconnected';
+    if (status === 'connected') label = 'Live WebSocket Stream Connected';
+    if (status === 'dev_connected') label = 'Development Event Source (Simulated)';
+    if (status === 'connecting') label = 'Connecting to Real-time Stream...';
+    if (status === 'unavailable') label = 'Real-Time WebSocket Server Unavailable';
 
     connectionState = {
       status,
       label,
-      isDevelopment: true,
+      isDevelopment: status === 'dev_connected',
       lastHeartbeat: new Date().toISOString()
     };
 
@@ -60,8 +72,158 @@ export const realtimeService = {
   },
 
   /**
+   * Connect to real FastAPI WebSocket server
+   * @param {string} customToken - Optional JWT token override
+   */
+  connect(customToken = null) {
+    const token = customToken || api.getToken();
+    if (!token) {
+      this.setConnectionState('disconnected');
+      return;
+    }
+
+    if (typeof WebSocket === 'undefined') {
+      // Node/Test environment: fallback to simulated state
+      this.setConnectionState('dev_connected');
+      return;
+    }
+
+    // Avoid duplicate connections
+    if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) {
+      return;
+    }
+
+    this.setConnectionState('connecting');
+
+    try {
+      const url = getWebSocketUrl(token);
+      socket = new WebSocket(url);
+
+      socket.onopen = () => {
+        reconnectAttempts = 0;
+        this.setConnectionState('connected');
+
+        // Start ping/pong heartbeat
+        clearInterval(pingInterval);
+        pingInterval = setInterval(() => {
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            try {
+              socket.send(JSON.stringify({ type: 'ping' }));
+            } catch (err) {
+              console.warn('[realtimeService] Ping failed:', err);
+            }
+          }
+        }, 25000);
+      };
+
+      socket.onmessage = async (event) => {
+        try {
+          const data = JSON.parse(event.data);
+
+          // Handle keepalive pong
+          if (data.type === 'pong' || data.action === 'pong') {
+            connectionState.lastHeartbeat = new Date().toISOString();
+            return;
+          }
+
+          // Handle initial handshake
+          if (data.event === 'connection.established') {
+            this.emit('REALTIME_CONNECTED', data);
+            return;
+          }
+
+          // Handle incoming live notification event
+          if (data.event === 'notification.created') {
+            const notif = {
+              id: data.notification_id || `ws-${Date.now()}`,
+              title: data.title || 'Incident Update',
+              message: data.message || '',
+              type: data.notification_type || 'emergency',
+              priority: data.severity === 'critical' ? 'critical' : data.severity === 'warning' ? 'high' : 'normal',
+              severity: data.severity || 'info',
+              entityType: data.related_entity_type,
+              entityId: data.related_entity_id,
+              timestamp: data.created_at || new Date().toISOString(),
+              targetRole: 'all'
+            };
+
+            await notificationService.addNotification(notif);
+            this.emit('NOTIFICATION_RECEIVED', notif);
+            this.emit((notif.type || 'system').toUpperCase(), notif);
+            return;
+          }
+
+          // Generic event dispatch
+          if (data.event) {
+            this.emit(data.event, data);
+            this.emit('*', data);
+          }
+        } catch (err) {
+          console.warn('[realtimeService] Error processing WebSocket message:', err);
+        }
+      };
+
+      socket.onerror = (err) => {
+        console.warn('[realtimeService] WebSocket error:', err);
+      };
+
+      socket.onclose = () => {
+        clearInterval(pingInterval);
+        socket = null;
+        this.setConnectionState('disconnected');
+
+        // Safe auto-reconnect with exponential backoff if token still present
+        if (api.getToken()) {
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), MAX_RECONNECT_DELAY);
+          reconnectAttempts++;
+          clearTimeout(reconnectTimeout);
+          reconnectTimeout = setTimeout(() => {
+            if (api.getToken()) {
+              this.connect();
+            }
+          }, delay);
+        }
+      };
+    } catch (err) {
+      console.warn('[realtimeService] Failed to establish WebSocket connection:', err);
+      this.setConnectionState('unavailable');
+    }
+  },
+
+  /**
+   * Disconnect active WebSocket connection
+   */
+  disconnect() {
+    clearTimeout(reconnectTimeout);
+    clearInterval(pingInterval);
+    if (socket) {
+      socket.close();
+      socket = null;
+    }
+    this.setConnectionState('disconnected');
+  },
+
+  /**
+   * Fetch real-time status from backend (Admin only)
+   */
+  async getRealtimeStatus() {
+    if (api.getToken()) {
+      try {
+        return await api.get('/api/ws/status');
+      } catch (err) {
+        console.warn('[realtimeService] Failed to get real-time status:', err.message);
+      }
+    }
+    return {
+      connected_users_count: 0,
+      active_sockets_count: 0,
+      connected_admins_count: 0
+    };
+  },
+
+  /**
    * Subscribe to specific real-time event types
-   * @param {string} eventType - e.g. 'EMERGENCY_ALERT', 'ASSIGNMENT_UPDATE', or '*' for all
+   * @param {string} eventType - e.g. 'EMERGENCY_ALERT', 'NOTIFICATION_RECEIVED', or '*' for all
    * @param {Function} callback
    * @returns {Function} unsubscribe function
    */
@@ -146,12 +308,9 @@ export const realtimeService = {
   },
 
   // =========================================================================
-  // SIMULATION HELPERS (Development Event Source)
+  // SIMULATION HELPERS (Development Event Source & Testing)
   // =========================================================================
 
-  /**
-   * Simulate an incoming critical emergency broadcast
-   */
   async simulateEmergencyAlert(data = {}) {
     return this.dispatchRealtimeEvent({
       type: 'emergency',
@@ -165,9 +324,6 @@ export const realtimeService = {
     });
   },
 
-  /**
-   * Simulate a volunteer assignment dispatch
-   */
   async simulateAssignmentDispatch(data = {}) {
     return this.dispatchRealtimeEvent({
       type: 'assignment',
@@ -182,9 +338,6 @@ export const realtimeService = {
     });
   },
 
-  /**
-   * Simulate volunteer acceptance response (notifying Admin Command)
-   */
   async simulateVolunteerResponse(data = {}) {
     return this.dispatchRealtimeEvent({
       type: 'assignment',
@@ -199,9 +352,6 @@ export const realtimeService = {
     });
   },
 
-  /**
-   * Simulate community activity schedule or update
-   */
   async simulateCommunityActivity(data = {}) {
     return this.dispatchRealtimeEvent({
       type: 'community',
@@ -215,9 +365,6 @@ export const realtimeService = {
     });
   },
 
-  /**
-   * Simulate certification verification status change
-   */
   async simulateCertificationVerification(data = {}) {
     return this.dispatchRealtimeEvent({
       type: 'certification',

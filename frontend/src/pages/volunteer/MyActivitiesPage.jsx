@@ -15,6 +15,7 @@ import { Calendar, Compass, CheckCircle2, Clock } from 'lucide-react';
 export const MyActivitiesPage = () => {
   const { user } = useAuth();
   const [myActivities, setMyActivities] = useState([]);
+  const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -30,8 +31,12 @@ export const MyActivitiesPage = () => {
       setLoading(true);
       setError(null);
       const volunteerId = user?.id || 'dev-skl-002';
-      const data = await communityService.getVolunteerActivities(volunteerId);
+      const [data, sum] = await Promise.all([
+        communityService.getVolunteerActivities(volunteerId),
+        communityService.getCommunitySummary()
+      ]);
       setMyActivities(data);
+      setSummary(sum);
     } catch (err) {
       console.error('[MyActivitiesPage] Error loading volunteer activities:', err);
       setError('Failed to load your activity registrations.');
@@ -97,6 +102,22 @@ export const MyActivitiesPage = () => {
           gap: 'var(--spacing-md)'
         }}
       >
+        {summary && (
+          <div
+            style={{
+              background: 'var(--color-surface)',
+              border: '1px solid var(--color-border-subtle)',
+              borderRadius: 'var(--radius-md)',
+              padding: '14px 18px'
+            }}
+          >
+            <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>Verified Community Hours</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-success)', marginTop: '4px' }}>
+              {summary.totalCommunityHours || 0} hrs
+            </div>
+          </div>
+        )}
+
         <div
           onClick={() => setStatusFilter('ALL')}
           style={{
@@ -211,7 +232,7 @@ export const MyActivitiesPage = () => {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))',
             gap: 'var(--spacing-md)'
           }}
         >

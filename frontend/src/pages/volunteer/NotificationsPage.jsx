@@ -121,7 +121,7 @@ export const NotificationsPage = () => {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, fontSize: '0.92rem', color: 'var(--color-text-primary)' }}>
               <Sparkles size={16} color="var(--color-primary)" />
-              <span>Simulate Real-Time Incoming Events (Stage 10 Dev Testing)</span>
+              <span>Simulate Real-Time Incident Broadcasts & Dispatch Alerts</span>
             </div>
             <div style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
               Click any trigger below to simulate incoming real-time alerts. Observe immediate notification arrival and topbar badge increment.
