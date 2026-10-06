@@ -35,10 +35,15 @@ let connectionState = {
 };
 
 const getWebSocketUrl = (token) => {
-  const isBrowser = typeof window !== 'undefined';
-  const protocol = isBrowser && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const defaultHost = 'localhost:8000';
-  return `${protocol}//${defaultHost}/api/ws?token=${encodeURIComponent(token)}`;
+  const apiBaseUrl =
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+    'http://localhost:8000';
+
+  const wsBaseUrl = apiBaseUrl
+    .replace(/^http:/, 'ws:')
+    .replace(/^https:/, 'wss:');
+
+  return `${wsBaseUrl.replace(/\/$/, '')}/api/ws?token=${encodeURIComponent(token)}`;
 };
 
 export const realtimeService = {
